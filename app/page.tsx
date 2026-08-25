@@ -1,4 +1,5 @@
-import Link from "next/link";
+import HomeProgressCard from "@/components/home-progress-card";
+import Link from "@/components/safe-link";
 
 const services = [
   { code: "01", title: "Learner Licence", copy: "A guided application that saves as you go.", href: "/login" },
@@ -23,13 +24,7 @@ export default function Home() {
           <div className="hero-actions"><Link className="button primary" href="/login">Try the demo account <span aria-hidden="true">→</span></Link><Link className="text-link" href="/how-it-works">See how it works</Link></div>
           <p className="microcopy">No real Aadhaar, payment or government records are used.</p>
         </div>
-        <aside className="journey-card" aria-label="Example learner licence progress">
-          <div className="card-head"><span className="badge">Demo / Mock service</span><span>8 min</span></div>
-          <h2>Learner Licence</h2><p>Your application, explained one step at a time.</p>
-          <div className="progress-row"><strong>60% complete</strong><span>Step 5 of 8</span></div><div className="progress-track"><span /></div>
-          <ol className="mini-steps"><li className="done"><i>✓</i><span>Eligibility & identity<small>Completed</small></span></li><li className="active"><i>5</i><span>Choose your RTO<small>Current step</small></span></li><li><i>6</i><span>Documents & appointment<small>Up next</small></span></li></ol>
-          <Link className="button primary full" href="/login">Continue application</Link><p className="saved">✓ Draft automatically saved</p>
-        </aside>
+        <HomeProgressCard />
       </section>
       <section className="services-section wrap">
         <div className="section-heading"><div><p className="eyebrow">Start with what you need</p><h2>Everyday services, clearly explained</h2></div><Link className="text-link" href="/services">View all services →</Link></div>

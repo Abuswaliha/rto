@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "./safe-link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Bot, Check, CheckCircle2, ChevronRight, CircleHelp, Clock3, Home, Info, Landmark, Loader2, LockKeyhole, Save, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
 import { Draft, emptyDraft, loadDraft, newApplicationId, saveApplication, saveDraft } from "@/lib/storage";

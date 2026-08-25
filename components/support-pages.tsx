@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "./safe-link";
 import { useState } from "react";
 import { AlertTriangle, ArrowRight, CalendarDays, Check, ChevronDown, CircleHelp, Download, ExternalLink, Landmark, QrCode, Search, WalletCards } from "lucide-react";
 import { PageShell } from "./page-shell";

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "./safe-link";
 import { ArrowRight, Car, Gavel, Search, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { PageShell } from "./page-shell";

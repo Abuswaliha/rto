@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "./safe-link";
 import { Accessibility, Bell, Languages, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { hasSession } from "@/lib/storage";

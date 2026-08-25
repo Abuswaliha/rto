@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "./safe-link";
 import { useEffect, useState } from "react";
 import { CalendarDays, Check, CheckCircle2, Circle, Download, FileCheck2, Printer, Search } from "lucide-react";
 import { DemoApplication, loadApplication } from "@/lib/storage";
