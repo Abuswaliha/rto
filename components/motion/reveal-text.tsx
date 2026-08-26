@@ -1,0 +1,3 @@
+"use client";
+import { motion,useReducedMotion } from "framer-motion";
+export function RevealText({text,className="",delay=0,as="h1"}:{text:string;className?:string;delay?:number;as?:"h1"|"h2"}){const reduced=useReducedMotion();const Tag=as;const words=text.split(" ");return <Tag className={className} aria-label={text}>{words.map((word,index)=><motion.span aria-hidden="true" className="reveal-word" key={`${word}-${index}`} initial={reduced?false:{opacity:0,y:12,filter:"blur(3px)"}} animate={{opacity:1,y:0,filter:"blur(0px)"}} transition={{duration:.38,delay:delay+index*.045,ease:[.22,1,.36,1]}}>{word}{index<words.length-1?" ":""}</motion.span>)}</Tag>}

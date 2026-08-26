@@ -3,10 +3,13 @@ import Link from "./safe-link";
 import { Accessibility, Bell, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { hasSession } from "@/lib/storage";
+import { usePathname } from "next/navigation";
 
 export function PortalHeader() {
   const [signedIn, setSignedIn] = useState(false);
   const [menu, setMenu] = useState(false);
+  const pathname = usePathname();
+  const navClass = (href: string) => pathname === href || pathname.startsWith(`${href}/`) ? "active" : undefined;
   useEffect(() => {
     const timer = setTimeout(() => setSignedIn(hasSession()), 0);
     return () => clearTimeout(timer);
@@ -24,18 +27,18 @@ export function PortalHeader() {
         <nav className={menu ? "nav-open" : ""} aria-label="Main navigation">
           {signedIn ? (
             <>
-              <Link href="/dashboard">Dashboard</Link>
-              <Link href="/services">Services</Link>
-              <Link href="/track">Applications</Link>
-              <Link href="/appointments">Appointments</Link>
-              <Link href="/wallet">Wallet</Link>
+              <Link className={navClass("/dashboard")} href="/dashboard">Dashboard</Link>
+              <Link className={navClass("/services")} href="/services">Services</Link>
+              <Link className={navClass("/track")} href="/track">Applications</Link>
+              <Link className={navClass("/appointments")} href="/appointments">Appointments</Link>
+              <Link className={navClass("/wallet")} href="/wallet">Wallet</Link>
             </>
           ) : (
             <>
-              <Link href="/services">Services</Link>
-              <Link href="/track">Track</Link>
-              <Link href="/how-it-works">Guides</Link>
-              <Link href="/help">Help</Link>
+              <Link className={navClass("/services")} href="/services">Services</Link>
+              <Link className={navClass("/track")} href="/track">Track</Link>
+              <Link className={navClass("/how-it-works")} href="/how-it-works">Guides</Link>
+              <Link className={navClass("/help")} href="/help">Help</Link>
             </>
           )}
         </nav>
@@ -49,9 +52,9 @@ export function PortalHeader() {
           </Link>
           {signedIn ? (
             <>
-              <button className="icon-only" aria-label="Notifications">
+              <Link className="icon-only" href="/notifications" aria-label="Notifications">
                 <Bell size={19} />
-              </button>
+              </Link>
               <Link
                 className="avatar"
                 href="/profile"

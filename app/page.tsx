@@ -1,37 +1,24 @@
 import HomeProgressCard from "@/components/home-progress-card";
 import Link from "@/components/safe-link";
+import { PortalHeader,PrototypeFooter } from "@/components/portal-header";
+import { Reveal } from "@/components/motion/reveal";
+import { RevealText } from "@/components/motion/reveal-text";
+import { Accessibility,ArrowRight,CalendarDays,Car,CheckCircle2,FileCheck2,Gavel,Languages,MapPin,ShieldCheck,Workflow } from "lucide-react";
 
-const services = [
-  { code: "01", title: "Learner Licence", copy: "A guided application that saves as you go.", href: "/login" },
-  { code: "02", title: "Track application", copy: "See what is done and what happens next.", href: "/track" },
-  { code: "03", title: "Book an appointment", copy: "Choose a clear date and time at a demo RTO.", href: "/appointments" },
+const services=[
+  {icon:FileCheck2,title:"Learner Licence",copy:"Apply through one guided process that saves every step.",meta:"About 8 minutes",href:"/login",action:"Start application"},
+  {icon:CalendarDays,title:"Appointments",copy:"Book or manage a clearly labelled demo RTO visit.",meta:"Choose a time",href:"/appointments",action:"Manage visit"},
+  {icon:Workflow,title:"Track application",copy:"See what is complete and the exact action that comes next.",meta:"Live demo status",href:"/track",action:"Track now"},
+  {icon:Car,title:"Vehicle details",copy:"Check a seeded synthetic vehicle record safely.",meta:"Demo record",href:"/vehicles",action:"Check vehicle"},
+  {icon:Gavel,title:"eChallan",copy:"Review and test-pay a fictional demonstration challan.",meta:"No real payment",href:"/challans",action:"Check challan"},
 ];
 
-export default function Home() {
-  return (
-    <main>
-      <div className="demo-strip">Demo mode · Fictional information only</div>
-      <header className="site-header wrap">
-        <Link className="brand" href="/" aria-label="Smart RTO home"><span className="brand-mark">SR</span><span>Smart RTO<small>Citizen portal</small></span></Link>
-        <nav aria-label="Main navigation"><Link href="/services">Services</Link><Link href="/track">Track</Link><Link href="/how-it-works">Guides</Link><Link href="/help">Help</Link></nav>
-        <Link className="button secondary" href="/login">Sign in</Link>
-      </header>
-      <section className="hero wrap">
-        <div className="hero-copy">
-          <p className="eyebrow">A simpler way through RTO services</p>
-          <h1>Less confusion.<br /><span>More progress.</span></h1>
-          <p className="lede">Smart RTO explains every step, remembers your progress and tells you exactly what to do next.</p>
-          <div className="hero-actions"><Link className="button primary" href="/login">Try the demo account <span aria-hidden="true">→</span></Link><Link className="text-link" href="/how-it-works">See how it works</Link></div>
-          <p className="microcopy">No real Aadhaar, payment or government records are used.</p>
-        </div>
-        <HomeProgressCard />
-      </section>
-      <section className="services-section wrap">
-        <div className="section-heading"><div><p className="eyebrow">Start with what you need</p><h2>Everyday services, clearly explained</h2></div><Link className="text-link" href="/services">View all services →</Link></div>
-        <div className="service-grid">{services.map((service) => <Link className="service-card" href={service.href} key={service.title}><span>{service.code}</span><h3>{service.title}</h3><p>{service.copy}</p><b aria-hidden="true">↗</b></Link>)}</div>
-      </section>
-      <section className="trust-band"><div className="wrap trust-grid"><div><strong>Built around citizens</strong><p>Plain language, accessible controls and progress you can see.</p></div><div><strong>Your demo data stays local</strong><p>This prototype does not connect to government systems.</p></div><div><strong>Clear about what is simulated</strong><p>Mock services are labelled at every important step.</p></div></div></section>
-      <footer><div className="wrap footer-grid"><div><span className="brand footer-brand"><span className="brand-mark">SR</span><span>Smart RTO<small>Independent hackathon prototype</small></span></span></div><p>Smart RTO is an independent hackathon prototype. It is not affiliated with MoRTH, NIC, Parivahan, Sarathi, VAHAN or any State Transport Department.</p><div><Link href="/about">About</Link><Link href="/security">Security</Link><Link href="/privacy">Privacy</Link></div></div></footer>
-    </main>
-  );
-}
+export default function Home(){return <><PortalHeader/><main className="home-page">
+  <section className="home-hero"><div className="wrap home-hero-grid"><div className="home-hero-copy"><p className="eyebrow">Public-service prototype</p><RevealText text="RTO services, made easier to understand."/><p className="lede">Simple guided forms, saved progress, clear instructions and multilingual support—designed around the citizen, not the system.</p><div className="hero-actions"><Link className="button primary" href="/services">Start a service <ArrowRight/></Link><Link className="button secondary" href="/track">Track application</Link></div><div className="hero-assurance"><ShieldCheck/><span><strong>Safe demonstration</strong>No real Aadhaar, government records or payments are used.</span></div></div><Reveal delay={.12} direction="right"><HomeProgressCard/></Reveal></div></section>
+  <section className="home-section wrap" id="popular-services"><Reveal><div className="section-heading"><div><p className="eyebrow">Popular services</p><h2>Start with what you need</h2><p>Each service explains the process in plain language before asking for information.</p></div><Link className="text-link" href="/services">View all services <ArrowRight/></Link></div></Reveal><div className="popular-service-grid">{services.map(({icon:Icon,...service},index)=><Reveal delay={index*.06} key={service.title}><Link href={service.href} className="modern-service-card"><span className="service-icon"><Icon/></span><div><h3>{service.title}</h3><p>{service.copy}</p></div><small>{service.meta}</small><strong>{service.action}<ArrowRight/></strong></Link></Reveal>)}</div></section>
+  <section className="home-process"><div className="wrap"><Reveal><div className="section-heading centered"><div><p className="eyebrow">How Smart RTO works</p><h2>One clear journey from start to finish</h2><p>You always know where you are, what is required and what happens next.</p></div></div></Reveal><div className="process-grid">{[["01","Choose a service","Start with a plain-language overview and a realistic time estimate."],["02","Complete guided steps","Progressive forms, contextual help and automatic local saving reduce repetition."],["03","Track the next action","A simple timeline shows completed stages and highlights what you need to do."]].map(([n,t,c],i)=><Reveal delay={i*.08} key={n}><article><i>{n}</i><h3>{t}</h3><p>{c}</p>{i<2&&<ArrowRight/>}</article></Reveal>)}</div></div></section>
+  <section className="home-section wrap why-grid"><Reveal direction="left"><div className="why-copy"><p className="eyebrow">Designed for first-time users</p><h2>A calmer public-service experience</h2><p>Smart RTO replaces unfamiliar terminology and dense forms with focused steps, readable guidance and predictable feedback.</p><Link className="button secondary" href="/how-it-works">See the citizen guide <ArrowRight/></Link></div></Reveal><Reveal direction="right"><div className="benefit-list">{[[CheckCircle2,"Progress is always visible","Completed, current and upcoming work use words and clear states—not colour alone."],[MapPin,"Helpful local context","Demo RTO suggestions and appointment guidance appear only when relevant."],[ShieldCheck,"Privacy-aware by design","Fictional data stays in your browser and every simulated action is labelled."]].map(([Icon,t,c])=><article key={String(t)}><span><Icon/></span><div><h3>{String(t)}</h3><p>{String(c)}</p></div></article>)}</div></Reveal></section>
+  <section className="inclusive-band"><div className="wrap inclusive-grid"><Reveal><div><span className="inclusive-icon"><Languages/></span><p className="eyebrow">Languages</p><h2>Use the portal in the language you understand best.</h2><p>English and ten Indian languages are available from the language control on every page.</p></div></Reveal><Reveal delay={.08}><div><span className="inclusive-icon"><Accessibility/></span><p className="eyebrow">Accessibility</p><h2>Built for keyboards, screen readers and smaller screens.</h2><p>Visible focus, responsive layouts, reduced-motion support and clear labels are part of the system.</p></div></Reveal></div></section>
+  <section className="guide-cta wrap"><Reveal><div><p className="eyebrow">Prefer to read first?</p><h2>Follow the Learner Licence guide before you begin.</h2><p>Understand the information, documents and appointment steps in about three minutes.</p><Link className="button primary" href="/how-it-works">Open step-by-step guide <ArrowRight/></Link></div></Reveal></section>
+  <section className="prototype-notice wrap"><ShieldCheck/><div><strong>Independent prototype</strong><p>Smart RTO is a fictional demonstration and does not connect to MoRTH, NIC, Parivahan, Sarathi, VAHAN or a State Transport Department.</p></div><Link href="/official-resources">Find official resources <ArrowRight/></Link></section>
+ </main><PrototypeFooter/></>}
