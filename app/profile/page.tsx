@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
-import { DemoAadhaar } from "@/components/demo-aadhaar";
+import { ProfilePage } from "@/components/profile";
 
-export const metadata: Metadata = { title: "Demo citizen profile" };
+export const metadata = { title: "Profile | Smart RTO" };
 
 export default function Page() {
-  return <DemoAadhaar profileMode />;
+  return <ProfilePage />;
 }
