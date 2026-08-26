@@ -1,1 +1,7 @@
-import { InfoPage } from "@/components/support-pages";export default function Page(){return <InfoPage kind="privacy"/>}
+import { ProfilePage } from "@/components/profile";
+
+export const metadata = { title: "Profile | Smart RTO" };
+
+export default function Page() {
+  return <ProfilePage />;
+}
