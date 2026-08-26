@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { DemoAadhaar } from "@/components/demo-aadhaar";
 
-export const metadata: Metadata = { title: "Demo citizen profile" };
+export const metadata: Metadata = { title: "Demo Aadhaar prefill" };
 
 export default function Page() {
-  return <DemoAadhaar profileMode />;
+  return <DemoAadhaar />;
 }

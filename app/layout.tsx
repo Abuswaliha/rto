@@ -5,6 +5,7 @@ import "./portal.css";
 import "./language.css";
 import "./redesign.css";
 import "./redesign-extras.css";
+import "./aadhaar.css";
 import { LanguageProvider } from "@/components/language-provider";
 import { SmoothScrollProvider } from "@/components/motion/smooth-scroll-provider";
 
