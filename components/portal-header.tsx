@@ -5,6 +5,8 @@ import { Accessibility, Bell, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { hasSession } from "@/lib/storage";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { LanguageSwitcher } from "./language-provider";
 
 export function PortalHeader() {
   const [signedIn, setSignedIn] = useState(false);
@@ -41,16 +43,15 @@ export function PortalHeader() {
       {/* Main Header Bar */}
       <header className="sticky top-0 z-40 flex h-[78px] w-full items-center justify-between border-b border-[#dce8e5] bg-white/95 px-4 backdrop-blur-md md:px-8 lg:px-12">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-3 no-underline">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#167c74] text-sm font-black text-white shadow-sm">
-            SR
-          </span>
-          <span className="flex flex-col font-extrabold leading-none text-[#152321]">
-            <span className="text-base tracking-tight">Smart RTO</span>
-            <small className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[#667572]">
-              Citizen portal
-            </small>
-          </span>
+        <Link href="/" className="flex shrink-0 items-center no-underline" aria-label="Smart RTO home">
+          <Image
+            src="/smart-rto-logo.png"
+            alt="Smart RTO — Services Simplified"
+            width={1180}
+            height={530}
+            priority
+            className="h-12 w-auto object-contain sm:h-14"
+          />
         </Link>
 
         {/* Desktop Navigation */}
@@ -92,6 +93,9 @@ export function PortalHeader() {
 
         {/* Right Tools Toolbar */}
         <div className="flex items-center gap-2.5 pl-6">
+          <div className="hidden lg:block">
+            <LanguageSwitcher compact />
+          </div>
           <Link
             className="grid h-10 w-10 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74]"
             href="/accessibility"
@@ -141,6 +145,10 @@ export function PortalHeader() {
       {/* Mobile Dropdown Menu Drawer */}
       {menu && (
         <div className="border-b border-[#dce8e5] bg-white px-4 py-3 shadow-lg md:hidden">
+          <div className="mb-3 flex items-center justify-between rounded-xl bg-[#f2f8f6] p-2.5">
+            <span className="px-1 text-xs font-bold text-[#40564f]">Portal language</span>
+            <LanguageSwitcher compact />
+          </div>
           <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
             <Link
               onClick={() => setMenu(false)}
@@ -190,9 +198,7 @@ export function PrototypeFooter() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-6 md:grid-cols-[1fr_1.5fr_auto]">
         <div>
           <span className="flex items-center gap-3 font-extrabold text-white">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#167c74] text-xs font-black">
-              SR
-            </span>
+            <Image src="/smart-rto-icon.png" alt="" width={48} height={48} className="h-12 w-12 rounded-xl object-contain" />
             <span className="flex flex-col leading-none">
               <span>Smart RTO</span>
               <small className="mt-1 text-[10px] font-semibold text-[#97aaa2]">
@@ -216,12 +222,8 @@ export function PrototypeFooter() {
           <Link href="/privacy" className="hover:text-[#ddf3ef]">
             Privacy
           </Link>
-          <Link href="/official-resources" className="hover:text-[#ddf3ef]">
-            Official resources
-          </Link>
         </div>
       </div>
     </footer>
   );
 }
-

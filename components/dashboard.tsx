@@ -16,12 +16,14 @@ import {
 } from "lucide-react";
 import {
   DemoAadhaarProfile,
+  DemoApplication,
   Draft,
   loadApplication,
   loadDemoProfile,
   loadDraft,
 } from "@/lib/storage";
 import { PageShell } from "./page-shell";
+import { appointmentParts } from "@/lib/appointment";
 
 const quick = [
   {
@@ -54,19 +56,21 @@ const quick = [
 
 export function Dashboard() {
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [hasApp, setHasApp] = useState(false);
+  const [application, setApplication] = useState<DemoApplication | null>(null);
   const [profile, setProfile] = useState<DemoAadhaarProfile | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDraft(loadDraft());
-      setHasApp(Boolean(loadApplication()));
+      setApplication(loadApplication());
       setProfile(loadDemoProfile());
     }, 0);
     return () => clearTimeout(timer);
   }, []);
 
   const progress = Math.round(((draft?.step || 0) / 8) * 100);
+  const hasApp = Boolean(application);
+  const appointment = appointmentParts(application?.appointment);
 
   return (
     <PageShell>
@@ -262,7 +266,7 @@ export function Dashboard() {
                     Simulated appointment
                   </strong>
                   <span className="text-[11px] text-[#5e6f68]">
-                    Saturday, 29 Aug at Sangli RTO
+                    {appointment.dayName[0] + appointment.dayName.slice(1).toLowerCase()}, {appointment.day} Aug at {appointment.time} · {application?.rto || "Sangli RTO"}
                   </span>
                 </div>
               </li>
@@ -273,5 +277,4 @@ export function Dashboard() {
     </PageShell>
   );
 }
-
 

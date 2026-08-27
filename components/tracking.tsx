@@ -10,10 +10,13 @@ import {
   Download,
   FileCheck2,
   Printer,
+  QrCode,
   Search,
 } from "lucide-react";
 import { DemoApplication, loadApplication } from "@/lib/storage";
 import { PageShell } from "./page-shell";
+import { appointmentParts } from "@/lib/appointment";
+import { downloadApplicationPdf, downloadAppointmentPdf } from "@/lib/demo-pdf";
 
 export function Tracking() {
   const [app, setApp] = useState<DemoApplication | null>(null);
@@ -31,7 +34,13 @@ export function Tracking() {
     rto: "MH-10 Sangli RTO",
     submittedAt: "2026-08-25",
     fullName: "Demo Citizen",
+    appointmentId: "APT-20037",
+    paymentReference: "TESTPAY-2026-483921",
+    paymentMethod: "Demo UPI",
+    feeTotal: "₹170 Demo",
   };
+  const selectedAppointment = appointmentParts(shown.appointment);
+  const lastUpdated = new Date(shown.submittedAt).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   const timelineSteps = [
     [
@@ -46,7 +55,7 @@ export function Tracking() {
     ],
     [
       "Appointment scheduled",
-      "29 Aug 2026",
+      selectedAppointment.timelineDate,
       "Attend the demo learner test at the selected time.",
     ],
     [
@@ -112,7 +121,7 @@ export function Tracking() {
                 {query || shown.id}
               </h2>
               <span className="text-[11px] text-[#5e6f68]">
-                Last updated 25 Aug 2026, 3:21 PM
+                Last updated {lastUpdated}
               </span>
             </div>
 
@@ -128,7 +137,7 @@ export function Tracking() {
               <button
                 type="button"
                 aria-label="Download acknowledgement"
-                onClick={() => window.print()}
+                onClick={() => downloadApplicationPdf(shown)}
                 className="grid h-10 w-10 place-items-center rounded-xl border border-[#dce8e5] bg-white text-[#5e6f68] transition-colors hover:bg-slate-50 hover:text-[#167c74]"
               >
                 <Download size={18} />
@@ -150,7 +159,7 @@ export function Tracking() {
                   Attend the simulated learner test appointment
                 </strong>
                 <p className="text-xs text-[#5e6f68]">
-                  29 August 2026 · 11:20 AM · {shown.rto}
+                  {selectedAppointment.longDate} · {shown.rto}
                 </p>
               </div>
             </div>
@@ -221,6 +230,24 @@ export function Tracking() {
               })}
             </ol>
           </article>
+
+          <article className="overflow-hidden rounded-2xl border border-[#cad8d4] bg-[#eef3f1] p-3 shadow-sm">
+            <div className="rounded-sm bg-white p-6 shadow-md md:p-10">
+              <div className="flex flex-col justify-between gap-4 border-b-2 border-[#152321] pb-5 sm:flex-row sm:items-start">
+                <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a64524]">Demo only · Application PDF preview</p><h2 className="mt-2 text-xl font-black text-[#152321]">Learner Licence acknowledgement</h2><p className="mt-1 text-xs text-[#5e6f68]">Complete application, payment receipt and appointment slip</p></div>
+                <div className="text-left text-xs sm:text-right"><strong className="block text-[#152321]">{shown.id}</strong><span className="text-[#5e6f68]">Appointment scheduled</span></div>
+              </div>
+
+              <div className="grid gap-7 py-6 md:grid-cols-2">
+                <section><h3 className="text-xs font-black uppercase tracking-wider text-[#0f7655]">Applicant and service</h3><dl className="mt-3 space-y-2 text-xs">{[["Applicant",shown.fullName],["Demo identity",shown.identity || "Demo Aadhaar · XXXX 1234"],["Date of birth",shown.dob || "15 Jan 2000"],["Guardian",shown.guardian || "Demo Guardian"],["Gender",shown.gender || "Not recorded"],["Address",[shown.address,shown.city,shown.pincode,shown.state].filter(Boolean).join(", ") || "Demo Nagar, Sangli 416416"],["Vehicle category",shown.vehicle || "LMV"],["RTO",shown.rto],["Documents",`${shown.documents?.length || 3} synthetic files checked`]].map(([label,value])=><div className="grid grid-cols-[110px_1fr] gap-3" key={label}><dt className="text-[#5e6f68]">{label}</dt><dd className="font-semibold text-[#152321]">{value}</dd></div>)}</dl></section>
+                <section className="rounded-xl border border-[#dce8e5] p-5"><div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#0f7655]"><QrCode size={17} />QR appointment slip</div><div className="my-4 grid h-28 w-28 place-items-center bg-[repeating-linear-gradient(45deg,#152321_0_6px,#fff_6px_12px)] p-3"><span className="rounded bg-white px-2 py-1 text-[9px] font-black">DEMO QR</span></div><dl className="space-y-2 text-xs"><div><dt className="text-[#5e6f68]">Appointment ID</dt><dd className="font-bold">{shown.appointmentId || "APT-20037"}</dd></div><div><dt className="text-[#5e6f68]">Date and time</dt><dd className="font-bold">{selectedAppointment.longDate}</dd></div><div><dt className="text-[#5e6f68]">Location</dt><dd className="font-bold">{shown.rto}</dd></div></dl></section>
+              </div>
+
+              <section className="border-t border-dashed border-[#9eaaa6] pt-5"><div className="flex items-center justify-between"><h3 className="text-xs font-black uppercase tracking-wider text-[#0f7655]">Payment receipt</h3><span className="rounded-full bg-[#e7f4ed] px-3 py-1 text-[10px] font-bold text-[#0d5c45]">Simulated payment successful</span></div><div className="mt-4 grid gap-3 text-xs sm:grid-cols-2"><p><span className="block text-[#5e6f68]">Payment reference</span><strong>{shown.paymentReference || "TESTPAY-2026-483921"}</strong></p><p><span className="block text-[#5e6f68]">Method</span><strong>{shown.paymentMethod || "Demo payment"}</strong></p><p><span className="block text-[#5e6f68]">Learner Licence + service fee</span><strong>₹150 Demo + ₹20 Demo</strong></p><p><span className="block text-[#5e6f68]">Total paid</span><strong className="text-[#0f7655]">{shown.feeTotal || "₹170 Demo"}</strong></p></div></section>
+
+              <div className="mt-6 flex flex-col gap-3 border-t border-[#dce8e5] pt-5 sm:flex-row"><button type="button" className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#167c74] px-4 py-3 text-xs font-bold text-white" onClick={() => downloadApplicationPdf(shown)}><Download size={16} />Download complete PDF</button><button type="button" className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#167c74] px-4 py-3 text-xs font-bold text-[#0f7655]" onClick={() => downloadAppointmentPdf(shown)}><QrCode size={16} />Download appointment PDF</button></div>
+            </div>
+          </article>
         </section>
 
         {/* Tracking Sidebar */}
@@ -250,7 +277,7 @@ export function Tracking() {
               <div className="flex justify-between">
                 <dt className="text-[#5e6f68]">Payment</dt>
                 <dd className="font-semibold text-[#152321]">
-                  TESTPAY-2026-483921
+                  {shown.paymentReference || "TESTPAY-2026-483921"}
                 </dd>
               </div>
             </dl>
@@ -267,10 +294,10 @@ export function Tracking() {
             <button
               type="button"
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#167c74] transition-all hover:bg-[#ddf3ef]"
-              onClick={() => window.print()}
+              onClick={() => downloadApplicationPdf(shown)}
             >
               <Download size={16} />
-              Print demo copy
+              Download complete PDF
             </button>
           </div>
         </aside>
@@ -278,5 +305,4 @@ export function Tracking() {
     </PageShell>
   );
 }
-
 
