@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { pageTranslationRows } from "./i18n-page-additions";
+import { Languages as LanguagesIcon } from "lucide-react";
 
 export const languages = [
   { code: "en", name: "English" },
@@ -749,13 +751,31 @@ const rows: Array<[string, ...string[]]> = [
   ["Your submitted application","आपका जमा किया गया आवेदन","আপনার জমা দেওয়া আবেদন","तुमचा सादर केलेला अर्ज","మీరు సమర్పించిన దరఖాస్తు","நீங்கள் சமர்ப்பித்த விண்ணப்பம்","તમારી સબમિટ કરેલી અરજી","آپ کی جمع کرائی گئی درخواست","ನೀವು ಸಲ್ಲಿಸಿದ ಅರ್ಜಿ","ଆପଣ ଦାଖଲ କରିଥିବା ଆବେଦନ","നിങ്ങൾ സമർപ്പിച്ച അപേക്ഷ"],
   ["Sign in with mobile","मोबाइल से साइन इन करें","মোবাইল দিয়ে সাইন ইন করুন","मोबाइलने साइन इन करा","మొబైల్‌తో సైన్ ఇన్ చేయండి","மொபைல் மூலம் உள்நுழைக","મોબાઇલથી સાઇન ઇન કરો","موبائل سے سائن ان کریں","ಮೊಬೈಲ್‌ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ","ମୋବାଇଲ୍‌ରେ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ","മൊബൈൽ ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക"],
   ["Enter demo OTP","डेमो OTP दर्ज करें","ডেমো OTP লিখুন","डेमो OTP टाका","డెమో OTPని నమోదు చేయండి","டெமோ OTP ஐ உள்ளிடவும்","ડેમો OTP દાખલ કરો","ڈیمو OTP درج کریں","ಡೆಮೊ OTP ನಮೂದಿಸಿ","ଡେମୋ OTP ଭରଣ କରନ୍ତୁ","ഡെമോ OTP നൽകുക"],
+  ["Secure demo sign in","सुरक्षित डेमो साइन इन","নিরাপদ ডেমো সাইন ইন","सुरक्षित डेमो साइन इन","సురక్షిత డెమో సైన్ ఇన్","பாதுகாப்பான டெமோ உள்நுழைவு","સુરક્ષિત ડેમો સાઇન ઇન","محفوظ ڈیمو سائن اِن","ಸುರಕ್ಷಿತ ಡೆಮೊ ಸೈನ್ ಇನ್","ନିରାପଦ ଡେମୋ ସାଇନ୍ ଇନ୍","സുരക്ഷിത ഡെമോ സൈൻ ഇൻ"],
+  ["Sign in to continue an application, see appointments and check what happens next.","आवेदन जारी रखने, अपॉइंटमेंट देखने और अगला कदम जानने के लिए साइन इन करें।","আবেদন চালিয়ে যেতে, অ্যাপয়েন্টমেন্ট দেখতে এবং পরবর্তী পদক্ষেপ জানতে সাইন ইন করুন।","अर्ज सुरू ठेवण्यासाठी, भेटी पाहण्यासाठी आणि पुढे काय आहे ते जाणण्यासाठी साइन इन करा.","దరఖాస్తును కొనసాగించడానికి, అపాయింట్‌మెంట్‌లను చూడటానికి మరియు తదుపరి ఏమిటో తెలుసుకోవడానికి సైన్ ఇన్ చేయండి.","விண்ணப்பத்தைத் தொடரவும், சந்திப்புகளைப் பார்க்கவும், அடுத்து என்ன என்பதை அறியவும் உள்நுழைக.","અરજી ચાલુ રાખવા, મુલાકાતો જોવા અને આગળ શું છે તે જાણવા સાઇન ઇન કરો.","درخواست جاری رکھنے، ملاقاتیں دیکھنے اور اگلا مرحلہ جاننے کے لیے سائن اِن کریں۔","ಅರ್ಜಿಯನ್ನು ಮುಂದುವರಿಸಲು, ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್‌ಗಳನ್ನು ನೋಡಲು ಮತ್ತು ಮುಂದಿನ ಹಂತ ತಿಳಿಯಲು ಸೈನ್ ಇನ್ ಮಾಡಿ.","ଆବେଦନ ଜାରି ରଖିବା, ସାକ୍ଷାତ ସମୟ ଦେଖିବା ଏବଂ ପରବର୍ତ୍ତୀ ପଦକ୍ଷେପ ଜାଣିବାକୁ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ।","അപേക്ഷ തുടരാനും അപ്പോയിന്റ്മെന്റുകൾ കാണാനും അടുത്ത ഘട്ടം അറിയാനും സൈൻ ഇൻ ചെയ്യുക."],
+  ["No real OTP is sent","कोई वास्तविक OTP नहीं भेजा जाता","কোনো আসল OTP পাঠানো হয় না","कोणताही खरा OTP पाठवला जात नाही","నిజమైన OTP పంపబడదు","உண்மையான OTP அனுப்பப்படாது","કોઈ વાસ્તવિક OTP મોકલવામાં આવતો નથી","کوئی حقیقی OTP نہیں بھیجا جاتا","ಯಾವುದೇ ನೈಜ OTP ಕಳುಹಿಸಲಾಗುವುದಿಲ್ಲ","କୌଣସି ପ୍ରକୃତ OTP ପଠାଯାଏ ନାହିଁ","യഥാർത്ഥ OTP അയയ്ക്കുന്നില്ല"],
+  ["No government identity is checked","किसी सरकारी पहचान की जाँच नहीं होती","কোনো সরকারি পরিচয় যাচাই করা হয় না","कोणतीही सरकारी ओळख तपासली जात नाही","ప్రభుత్వ గుర్తింపును తనిఖీ చేయరు","அரசு அடையாளம் சரிபார்க்கப்படாது","કોઈ સરકારી ઓળખ તપાસવામાં આવતી નથી","کسی سرکاری شناخت کی جانچ نہیں ہوتی","ಯಾವುದೇ ಸರ್ಕಾರಿ ಗುರುತನ್ನು ಪರಿಶೀಲಿಸುವುದಿಲ್ಲ","କୌଣସି ସରକାରୀ ପରିଚୟ ଯାଞ୍ଚ କରାଯାଏ ନାହିଁ","സർക്കാർ തിരിച്ചറിയൽ പരിശോധിക്കുന്നില്ല"],
+  ["Your draft stays on this device","आपका ड्राफ्ट इसी डिवाइस पर रहता है","আপনার খসড়া এই ডিভাইসেই থাকে","तुमचा मसुदा याच उपकरणावर राहतो","మీ డ్రాఫ్ట్ ఈ పరికరంలోనే ఉంటుంది","உங்கள் வரைவு இந்தச் சாதனத்திலேயே இருக்கும்","તમારો ડ્રાફ્ટ આ ઉપકરણમાં જ રહે છે","آپ کا مسودہ اسی ڈیوائس پر رہتا ہے","ನಿಮ್ಮ ಕರಡು ಈ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತದೆ","ଆପଣଙ୍କ ଡ୍ରାଫ୍ଟ ଏହି ଡିଭାଇସରେ ରହେ","നിങ്ങളുടെ ഡ്രാഫ്റ്റ് ഈ ഉപകരണത്തിൽ തന്നെ തുടരും"],
+  ["Use the reviewer account below or any fictional 10-digit number.","नीचे दिया समीक्षक खाता या कोई काल्पनिक 10-अंकीय नंबर उपयोग करें।","নিচের পর্যালোচক অ্যাকাউন্ট বা যেকোনো কাল্পনিক ১০-সংখ্যার নম্বর ব্যবহার করুন।","खालील परीक्षक खाते किंवा कोणताही काल्पनिक १० अंकी क्रमांक वापरा.","క్రింద ఉన్న సమీక్షకుల ఖాతా లేదా ఏదైనా కల్పిత 10 అంకెల నంబర్‌ను ఉపయోగించండి.","கீழே உள்ள மதிப்பாய்வாளர் கணக்கு அல்லது கற்பனையான 10 இலக்க எண்ணைப் பயன்படுத்தவும்.","નીચેનું સમીક્ષક ખાતું અથવા કોઈપણ કાલ્પનિક 10 અંકનો નંબર વાપરો.","ذیل کا جائزہ کار اکاؤنٹ یا کوئی فرضی 10 ہندسوں کا نمبر استعمال کریں۔","ಕೆಳಗಿನ ವಿಮರ್ಶಕರ ಖಾತೆ ಅಥವಾ ಯಾವುದೇ ಕಾಲ್ಪನಿಕ 10 ಅಂಕಿಯ ಸಂಖ್ಯೆಯನ್ನು ಬಳಸಿ.","ନିମ୍ନରେ ଥିବା ସମୀକ୍ଷକ ଖାତା କିମ୍ବା କୌଣସି କାଳ୍ପନିକ ୧୦ ଅଙ୍କ ବିଶିଷ୍ଟ ନମ୍ବର ବ୍ୟବହାର କରନ୍ତୁ।","താഴെയുള്ള റിവ്യൂവർ അക്കൗണ്ട് അല്ലെങ്കിൽ ഏതെങ്കിലും സാങ്കൽപ്പിക 10 അക്ക നമ്പർ ഉപയോഗിക്കുക."],
+  ["6-digit demo OTP","6-अंकीय डेमो OTP","৬-সংখ্যার ডেমো OTP","६ अंकी डेमो OTP","6 అంకెల డెమో OTP","6 இலக்க டெமோ OTP","6 અંકનો ડેમો OTP","6 ہندسوں کا ڈیمو OTP","6 ಅಂಕಿಯ ಡೆಮೊ OTP","୬ ଅଙ୍କ ବିଶିଷ୍ଟ ଡେମୋ OTP","6 അക്ക ഡെമോ OTP"],
+  ["Mobile number","मोबाइल नंबर","মোবাইল নম্বর","मोबाइल क्रमांक","మొబైల్ నంబర్","மொபைல் எண்","મોબાઇલ નંબર","موبائل نمبر","ಮೊಬೈಲ್ ಸಂಖ್ಯೆ","ମୋବାଇଲ୍ ନମ୍ବର","മൊബൈൽ നമ്പർ"],
+  ["Mock OTP:","डेमो OTP:","ডেমো OTP:","डेमो OTP:","డెమో OTP:","டெமோ OTP:","ડેમો OTP:","ڈیمو OTP:","ಡೆಮೊ OTP:","ଡେମୋ OTP:","ഡെമോ OTP:"],
+  ["Continue","जारी रखें","চালিয়ে যান","पुढे जा","కొనసాగించండి","தொடரவும்","ચાલુ રાખો","جاری رکھیں","ಮುಂದುವರಿಸಿ","ଜାରି ରଖନ୍ତୁ","തുടരുക"],
+  ["Sign in to demo","डेमो में साइन इन करें","ডেমোতে সাইন ইন করুন","डेमोमध्ये साइन इन करा","డెమోకు సైన్ ఇన్ చేయండి","டெமோவில் உள்நுழைக","ડેમોમાં સાઇન ઇન કરો","ڈیمو میں سائن اِن کریں","ಡೆಮೊಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ","ଡେମୋରେ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ","ഡെമോയിലേക്ക് സൈൻ ഇൻ ചെയ്യുക"],
+  ["Continue with Google","Google से जारी रखें","Google দিয়ে চালিয়ে যান","Google सह पुढे जा","Googleతో కొనసాగించండి","Google மூலம் தொடரவும்","Google સાથે ચાલુ રાખો","Google کے ساتھ جاری رکھیں","Google ಮೂಲಕ ಮುಂದುವರಿಸಿ","Google ସହିତ ଜାରି ରଖନ୍ତୁ","Google ഉപയോഗിച്ച് തുടരുക"],
+  ["Opening Google…","Google खोला जा रहा है…","Google খোলা হচ্ছে…","Google उघडत आहे…","Google తెరవబడుతోంది…","Google திறக்கப்படுகிறது…","Google ખોલી રહ્યું છે…","Google کھولا جا رہا ہے…","Google ತೆರೆಯಲಾಗುತ್ತಿದೆ…","Google ଖୋଲାଯାଉଛି…","Google തുറക്കുന്നു…"],
+  ["Fill demo login","डेमो लॉगिन भरें","ডেমো লগইন পূরণ করুন","डेमो लॉगिन भरा","డెమో లాగిన్‌ను పూరించండి","டெமோ உள்நுழைவை நிரப்பவும்","ડેમો લૉગિન ભરો","ڈیمو لاگ اِن بھریں","ಡೆಮೊ ಲಾಗಿನ್ ಭರ್ತಿ ಮಾಡಿ","ଡେମୋ ଲଗଇନ୍ ପୂରଣ କରନ୍ତୁ","ഡെമോ ലോഗിൻ പൂരിപ്പിക്കുക"],
+  ["Reviewer access","समीक्षक पहुँच","পর্যালোচক প্রবেশাধিকার","परीक्षक प्रवेश","సమీక్షకుల యాక్సెస్","மதிப்பாய்வாளர் அணுகல்","સમીક્ષક ઍક્સેસ","جائزہ کار کی رسائی","ವಿಮರ್ಶಕರ ಪ್ರವೇಶ","ସମୀକ୍ଷକ ପ୍ରବେଶ","റിവ്യൂവർ ആക്സസ്"],
+  ["Enter the 10-digit demo mobile number.","10-अंकीय डेमो मोबाइल नंबर दर्ज करें।","১০-সংখ্যার ডেমো মোবাইল নম্বর লিখুন।","१० अंकी डेमो मोबाइल क्रमांक टाका.","10 అంకెల డెమో మొబైల్ నంబర్‌ను నమోదు చేయండి.","10 இலக்க டெமோ மொபைல் எண்ணை உள்ளிடவும்.","10 અંકનો ડેમો મોબાઇલ નંબર દાખલ કરો.","10 ہندسوں کا ڈیمو موبائل نمبر درج کریں۔","10 ಅಂಕಿಯ ಡೆಮೊ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.","୧୦ ଅଙ୍କ ବିଶିଷ୍ଟ ଡେମୋ ମୋବାଇଲ୍ ନମ୍ବର ଭରଣ କରନ୍ତୁ।","10 അക്ക ഡെമോ മൊബൈൽ നമ്പർ നൽകുക."],
+  ["That demo OTP is not correct. Use 123456.","वह डेमो OTP सही नहीं है। 123456 उपयोग करें।","ওই ডেমো OTP সঠিক নয়। 123456 ব্যবহার করুন।","तो डेमो OTP बरोबर नाही. 123456 वापरा.","ఆ డెమో OTP సరైనది కాదు. 123456 ఉపయోగించండి.","அந்த டெமோ OTP சரியில்லை. 123456 ஐப் பயன்படுத்தவும்.","તે ડેમો OTP સાચો નથી. 123456 વાપરો.","وہ ڈیمو OTP درست نہیں ہے۔ 123456 استعمال کریں۔","ಆ ಡೆಮೊ OTP ಸರಿಯಾಗಿಲ್ಲ. 123456 ಬಳಸಿ.","ସେହି ଡେମୋ OTP ସଠିକ୍ ନୁହେଁ। 123456 ବ୍ୟବହାର କରନ୍ତୁ।","ആ ഡെമോ OTP ശരിയല്ല. 123456 ഉപയോഗിക്കുക."],
+  ["Smart RTO is an independent hackathon prototype, not a government service.","Smart RTO एक स्वतंत्र हैकाथॉन प्रोटोटाइप है, सरकारी सेवा नहीं।","Smart RTO একটি স্বাধীন হ্যাকাথন প্রোটোটাইপ, সরকারি পরিষেবা নয়।","Smart RTO हा स्वतंत्र हॅकाथॉन नमुना आहे, सरकारी सेवा नाही.","Smart RTO ఒక స్వతంత్ర హ్యాకథాన్ నమూనా, ప్రభుత్వ సేవ కాదు.","Smart RTO ஒரு சுயாதீன ஹேக்கத்தான் மாதிரி; அரசு சேவை அல்ல.","Smart RTO એક સ્વતંત્ર હેકાથોન પ્રોટોટાઇપ છે, સરકારી સેવા નથી.","Smart RTO ایک آزاد ہیکاتھون نمونہ ہے، سرکاری سروس نہیں۔","Smart RTO ಸ್ವತಂತ್ರ ಹ್ಯಾಕಥಾನ್ ಮಾದರಿ, ಸರ್ಕಾರಿ ಸೇವೆಯಲ್ಲ.","Smart RTO ଏକ ସ୍ୱାଧୀନ ହ୍ୟାକାଥନ୍ ପ୍ରୋଟୋଟାଇପ୍, ସରକାରୀ ସେବା ନୁହେଁ।","Smart RTO ഒരു സ്വതന്ത്ര ഹാക്കത്തോൺ മാതൃകയാണ്, സർക്കാർ സേവനമല്ല."],
 ];
 
 const languageCodes = languages.slice(1).map((item) => item.code);
 const dictionaries = Object.fromEntries(
   languageCodes.map((code, index) => [
     code,
-    new Map(rows.map((row) => [row[0], row[index + 1]])),
+    new Map([...rows, ...pageTranslationRows].map((row) => [row[0], row[index + 1]])),
   ]),
 ) as Record<Exclude<LanguageCode, "en">, Map<string, string>>;
 const hindiOverrides: Array<[string,string]> = [
@@ -1388,6 +1408,24 @@ for (const [source, target] of hindiOverrides) {
 
 const originals = new WeakMap<Text, string>();
 const applied = new WeakMap<Text, string>();
+const originalAttributes = new WeakMap<Element, Map<string, string>>();
+const appliedAttributes = new WeakMap<Element, Map<string, string>>();
+const translatedAttributes = ["aria-label", "placeholder", "title", "alt"] as const;
+const dynamicLabels: Record<Exclude<LanguageCode, "en">, {
+  services: [string, string]; lastUpdated: string; lastSaved: string; complete: string;
+  step: (current: string, total: string, rest: string) => string; minutesLeft: (minutes: string) => string;
+}> = {
+  hi: { services: ["सेवा", "सेवाएँ"], lastUpdated: "अंतिम अपडेट", lastSaved: "अंतिम बार सहेजा", complete: "पूरा", step: (a,b,r) => `चरण ${a} / ${b}${r}`, minutesLeft: n => `लगभग ${n} मिनट शेष` },
+  bn: { services: ["পরিষেবা", "পরিষেবা"], lastUpdated: "সর্বশেষ আপডেট", lastSaved: "সর্বশেষ সংরক্ষণ", complete: "সম্পূর্ণ", step: (a,b,r) => `ধাপ ${a} / ${b}${r}`, minutesLeft: n => `প্রায় ${n} মিনিট বাকি` },
+  mr: { services: ["सेवा", "सेवा"], lastUpdated: "शेवटचे अपडेट", lastSaved: "शेवटचे जतन", complete: "पूर्ण", step: (a,b,r) => `पायरी ${a} / ${b}${r}`, minutesLeft: n => `सुमारे ${n} मिनिटे बाकी` },
+  te: { services: ["సేవ", "సేవలు"], lastUpdated: "చివరి నవీకరణ", lastSaved: "చివరిగా సేవ్ చేసింది", complete: "పూర్తయింది", step: (a,b,r) => `దశ ${a} / ${b}${r}`, minutesLeft: n => `సుమారు ${n} నిమిషాలు మిగిలాయి` },
+  ta: { services: ["சேவை", "சேவைகள்"], lastUpdated: "கடைசியாக புதுப்பிக்கப்பட்டது", lastSaved: "கடைசியாக சேமிக்கப்பட்டது", complete: "முடிந்தது", step: (a,b,r) => `படி ${a} / ${b}${r}`, minutesLeft: n => `சுமார் ${n} நிமிடங்கள் மீதம்` },
+  gu: { services: ["સેવા", "સેવાઓ"], lastUpdated: "છેલ્લું અપડેટ", lastSaved: "છેલ્લે સાચવ્યું", complete: "પૂર્ણ", step: (a,b,r) => `પગલું ${a} / ${b}${r}`, minutesLeft: n => `લગભગ ${n} મિનિટ બાકી` },
+  ur: { services: ["سروس", "خدمات"], lastUpdated: "آخری اپ ڈیٹ", lastSaved: "آخری بار محفوظ", complete: "مکمل", step: (a,b,r) => `مرحلہ ${a} / ${b}${r}`, minutesLeft: n => `تقریباً ${n} منٹ باقی` },
+  kn: { services: ["ಸೇವೆ", "ಸೇವೆಗಳು"], lastUpdated: "ಕೊನೆಯ ನವೀಕರಣ", lastSaved: "ಕೊನೆಯದಾಗಿ ಉಳಿಸಲಾಗಿದೆ", complete: "ಪೂರ್ಣ", step: (a,b,r) => `ಹಂತ ${a} / ${b}${r}`, minutesLeft: n => `ಸುಮಾರು ${n} ನಿಮಿಷಗಳು ಬಾಕಿ` },
+  or: { services: ["ସେବା", "ସେବା"], lastUpdated: "ଶେଷ ଅଦ୍ୟତନ", lastSaved: "ଶେଷ ସଞ୍ଚୟ", complete: "ସମ୍ପୂର୍ଣ୍ଣ", step: (a,b,r) => `ପଦକ୍ଷେପ ${a} / ${b}${r}`, minutesLeft: n => `ପ୍ରାୟ ${n} ମିନିଟ୍ ବାକି` },
+  ml: { services: ["സേവനം", "സേവനങ്ങൾ"], lastUpdated: "അവസാനം പുതുക്കിയത്", lastSaved: "അവസാനം സംരക്ഷിച്ചത്", complete: "പൂർത്തിയായി", step: (a,b,r) => `ഘട്ടം ${a} / ${b}${r}`, minutesLeft: n => `ഏകദേശം ${n} മിനിറ്റ് ബാക്കി` },
+};
 
 function translateText(value: string, language: LanguageCode) {
   if (language === "en") return value;
@@ -1406,6 +1444,20 @@ function translateText(value: string, language: LanguageCode) {
   if (fallbackTranslations[text]?.[language]) {
     return `${lead}${fallbackTranslations[text][language]}${tail}`;
   }
+
+  const labels = dynamicLabels[language];
+  const serviceCount = text.match(/^(\d+)\s+services?$/i);
+  if (serviceCount) return `${lead}${serviceCount[1]} ${labels.services[serviceCount[1] === "1" ? 0 : 1]}${tail}`;
+  const lastUpdated = text.match(/^Last updated\s+(.+)$/);
+  if (lastUpdated) return `${lead}${labels.lastUpdated} ${lastUpdated[1]}${tail}`;
+  const lastSaved = text.match(/^Last saved\s+(.+)$/);
+  if (lastSaved) return `${lead}${labels.lastSaved} ${lastSaved[1]}${tail}`;
+  const completion = text.match(/^(\d+)% complete$/);
+  if (completion) return `${lead}${completion[1]}% ${labels.complete}${tail}`;
+  const step = text.match(/^Step (\d+) of (\d+)(.*)$/);
+  if (step) return `${lead}${labels.step(step[1], step[2], step[3])}${tail}`;
+  const minutes = text.match(/^About (\d+) min left$/);
+  if (minutes) return `${lead}${labels.minutesLeft(minutes[1])}${tail}`;
 
   if (language === "hi") {
     const patterns: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
@@ -1437,26 +1489,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         हिन्दी: "hi",
         मराठी: "mr",
       };
-      setCurrent(
-        (legacy[stored] ||
-          languages.find((item) => item.code === stored)?.code ||
-          "en") as LanguageCode,
-      );
+      setCurrent((legacy[stored] || languages.find((item) => item.code === stored)?.code || "en") as LanguageCode);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ur" ? "rtl" : "ltr";
-    const apply = () => {
-      const walker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT,
-      );
-      let node: Text | null;
-      while ((node = walker.nextNode() as Text | null)) {
+    const translateTextNode = (node: Text) => {
         if (node.parentElement?.closest("script,style,[data-no-translate]"))
-          continue;
+          return;
         const last = applied.get(node);
         if (
           !originals.has(node) ||
@@ -1464,25 +1506,66 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         )
           originals.set(node, node.nodeValue || "");
         const result = translateText(originals.get(node) || "", language);
-        node.nodeValue = result;
+        if (node.nodeValue !== result) node.nodeValue = result;
         applied.set(node, result);
+    };
+
+    const translateElementAttributes = (element: Element) => {
+        if (element.closest("[data-no-translate]")) return;
+        const originalsForElement = originalAttributes.get(element) || new Map<string, string>();
+        const appliedForElement = appliedAttributes.get(element) || new Map<string, string>();
+        for (const attribute of translatedAttributes) {
+          const current = element.getAttribute(attribute);
+          if (current === null) continue;
+          const lastApplied = appliedForElement.get(attribute);
+          if (!originalsForElement.has(attribute) || (lastApplied !== undefined && current !== lastApplied)) {
+            originalsForElement.set(attribute, current);
+          }
+          const result = translateText(originalsForElement.get(attribute) || "", language);
+          if (current !== result) element.setAttribute(attribute, result);
+          appliedForElement.set(attribute, result);
+        }
+        originalAttributes.set(element, originalsForElement);
+        appliedAttributes.set(element, appliedForElement);
+    };
+
+    const applyNode = (root: Node) => {
+      if (root.nodeType === Node.TEXT_NODE) {
+        translateTextNode(root as Text);
+        return;
+      }
+      if (!(root instanceof Element)) return;
+      translateElementAttributes(root);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node: Text | null;
+      while ((node = walker.nextNode() as Text | null)) translateTextNode(node);
+      for (const element of root.querySelectorAll<Element>(
+        translatedAttributes.map((attribute) => `[${attribute}]`).join(","),
+      )) {
+        translateElementAttributes(element);
       }
     };
-    apply();
-    const observer = new MutationObserver(() => {
-      observer.disconnect();
-      apply();
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-    });
-    observer.observe(document.body, {
+
+    applyNode(document.body);
+    const observerOptions: MutationObserverInit = {
       childList: true,
       subtree: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: [...translatedAttributes],
+    };
+    const observer = new MutationObserver((mutations) => {
+      observer.disconnect();
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          for (const node of mutation.addedNodes) applyNode(node);
+        } else {
+          applyNode(mutation.target);
+        }
+      }
+      observer.observe(document.body, observerOptions);
     });
+    observer.observe(document.body, observerOptions);
     return () => observer.disconnect();
   }, [language]);
   const value = useMemo(
@@ -1497,27 +1580,33 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   );
   return (
     <LanguageContext.Provider value={value}>
-      <label className="global-language-select" data-no-translate>
-        <span aria-hidden="true">文</span>
-        <span className="sr-only">Choose language</span>
-        <select
-          aria-label="Choose language"
-          value={language}
-          onChange={(event) =>
-            value.setLanguage(event.target.value as LanguageCode)
-          }
-        >
-          {languages.map((item) => (
-            <option key={item.code} value={item.code}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
       {children}
     </LanguageContext.Provider>
   );
 }
 export function useLanguage() {
   return useContext(LanguageContext);
+}
+
+export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
+  const { language, setLanguage } = useLanguage();
+  return (
+    <label
+      className={`relative inline-flex h-10 items-center rounded-xl border border-[#cfe0da] bg-[#f4f9f7] text-[#166f64] shadow-sm transition hover:border-[#8fc2b7] hover:bg-[#eaf5f2] ${compact ? "w-[104px]" : "w-[150px]"}`}
+      data-no-translate
+    >
+      <LanguagesIcon aria-hidden="true" className="pointer-events-none absolute left-3" size={17} />
+      <span className="sr-only">Choose language</span>
+      <select
+        aria-label="Choose language"
+        className="h-full w-full cursor-pointer appearance-none border-0 bg-transparent pl-9 pr-2 text-xs font-bold outline-none"
+        value={language}
+        onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+      >
+        {languages.map((item) => (
+          <option key={item.code} value={item.code}>{item.name}</option>
+        ))}
+      </select>
+    </label>
+  );
 }

@@ -102,7 +102,7 @@ export function DemoAadhaar({ profileMode = false }: { profileMode?: boolean }) 
             <button type="button" className="button secondary" onClick={useDemoNumber}>Use demo Aadhaar</button>
           </div>
           <label className="aadhaar-input">
-            Demo Aadhaar number <span>Required</span>
+            Demo Aadhaar number <span className="font-bold text-red-500">*</span>
             <div className="input-with-icon"><IdCard /><input aria-describedby="aadhaar-help" value={aadhaar} onChange={(event) => { setAadhaar(formatAadhaar(event.target.value)); setError(""); setSaved(false); }} inputMode="numeric" placeholder="9999 8888 7777" /></div>
           </label>
           <p id="aadhaar-help" className="help-text">Only the number shown above works. Do not enter a real Aadhaar number.</p>

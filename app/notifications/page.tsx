@@ -1,7 +1,18 @@
+"use client";
+
 import { CalendarDays, FileCheck2, Info } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { useEffect, useState } from "react";
+import { DemoApplication, loadApplication } from "@/lib/storage";
+import { appointmentParts } from "@/lib/appointment";
 
 export default function NotificationsPage() {
+  const [application, setApplication] = useState<DemoApplication | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setApplication(loadApplication()), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  const appointment = appointmentParts(application?.appointment);
   return (
     <PageShell>
       <section className="border-b border-[#dce8e5] bg-gradient-to-b from-[#f7fbfa] to-[#edf7f4] py-12">
@@ -45,7 +56,7 @@ export default function NotificationsPage() {
               Appointment scheduled
             </strong>
             <p className="mt-0.5 text-xs leading-relaxed text-[#5e6f68]">
-              Your fictional visit is booked for 29 August at 11:20 AM.
+              Your fictional visit is booked for {appointment.day} August at {appointment.time}.
             </p>
             <small className="mt-2 block text-[11px] font-semibold text-[#0f7655]">
               Yesterday · Demo
