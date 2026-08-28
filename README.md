@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Smart RTO Citizen Portal
 
 Smart RTO is an independent hackathon prototype that demonstrates a simpler citizen experience for common Indian RTO journeys. It is not affiliated with MoRTH, NIC, Parivahan, Sarathi, VAHAN, or any State Transport Department.
@@ -61,3 +62,6 @@ Codex helped establish the information architecture, implement the working front
 ## Limitations and production pathway
 
 The prototype is not legally authoritative and processes no real application. A production version would require authorized government APIs, strong identity and consent controls, audited services, encryption, RBAC, fraud controls, DPDP-compliant retention, and operational governance.
+=======
+# rto
+>>>>>>> 93d2e986cedee7c40ace514b1dfcf5b9bc79c337
