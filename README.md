@@ -36,6 +36,16 @@ Open `http://localhost:3000`.
 | Payments, vehicle and challan records | Synthetic |
 | Document upload/OCR | Simulated locally |
 
+### Appwrite wallet persistence
+
+Set `NEXT_PUBLIC_APPWRITE_DATABASE_ID` and `NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID` in `.env.local`. To create the database and collection once, set a server-only `APPWRITE_API_KEY` and run:
+
+```bash
+node scripts/setup-appwrite-wallet.mjs
+```
+
+The collection uses document-level security. Each saved Aadhaar/PAN record is granted read, update, and delete permissions only to the Appwrite user who created it; collection-level access allows authenticated users to create records. Do not store real identity numbers in this prototype.
+
 ## Technology
 
 Next.js App Router via the OpenAI Sites-compatible Vinext runtime, TypeScript, React, Tailwind CSS, Lucide icons, React Hook Form, and Zod. No database or real backend is used.

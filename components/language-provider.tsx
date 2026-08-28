@@ -3,6 +3,13 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { pageTranslationRows } from "./i18n-page-additions";
 import { Languages as LanguagesIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 export const languages = [
   { code: "en", name: "English" },
@@ -1591,22 +1598,28 @@ export function useLanguage() {
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { language, setLanguage } = useLanguage();
   return (
-    <label
-      className={`relative inline-flex h-10 items-center rounded-xl border border-[#cfe0da] bg-[#f4f9f7] text-[#166f64] shadow-sm transition hover:border-[#8fc2b7] hover:bg-[#eaf5f2] ${compact ? "w-[104px]" : "w-[150px]"}`}
-      data-no-translate
-    >
-      <LanguagesIcon aria-hidden="true" className="pointer-events-none absolute left-3" size={17} />
-      <span className="sr-only">Choose language</span>
-      <select
-        aria-label="Choose language"
-        className="h-full w-full cursor-pointer appearance-none border-0 bg-transparent pl-9 pr-2 text-xs font-bold outline-none"
+    <div className={`relative ${compact ? "w-[128px]" : "w-[155px]"}`} data-no-translate>
+      <Select
         value={language}
-        onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+        onValueChange={(val) => setLanguage(val as LanguageCode)}
       >
-        {languages.map((item) => (
-          <option key={item.code} value={item.code}>{item.name}</option>
-        ))}
-      </select>
-    </label>
+        <SelectTrigger
+          aria-label="Choose language"
+          className="h-10 rounded-xl border-[#cfe0da] bg-[#f4f9f7] text-[#166f64] font-bold text-xs shadow-xs hover:border-[#8fc2b7] hover:bg-[#eaf5f2] px-2.5 transition-all"
+        >
+          <div className="flex items-center gap-1.5 truncate">
+            <LanguagesIcon size={15} className="shrink-0 text-[#167c74]" />
+            <SelectValue placeholder="Language" />
+          </div>
+        </SelectTrigger>
+        <SelectContent className="max-h-72 z-50 rounded-xl border-[#cfe0da] bg-white shadow-xl">
+          {languages.map((item) => (
+            <SelectItem key={item.code} value={item.code} className="text-xs font-semibold">
+              {item.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

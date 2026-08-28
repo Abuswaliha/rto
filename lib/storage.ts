@@ -1,11 +1,31 @@
 export type Draft = {
   step:number;state:string;age:string;vehicle:string;identity:string;aadhaar:string;aadhaarVerified:boolean;dob:string;mobile:string;otp:string;fullName:string;guardian:string;gender:string;pincode:string;city:string;address:string;rto:string;documents:string[];appointment:string;declaration:boolean;payment:string;updatedAt:string;
 };
-export type DemoApplication={
-  id:string;status:string;appointment:string;rto:string;submittedAt:string;fullName:string;
-  appointmentId?:string;paymentReference?:string;paymentMethod?:string;feeTotal?:string;
-  identity?:string;dob?:string;guardian?:string;gender?:string;address?:string;city?:string;
-  pincode?:string;state?:string;vehicle?:string;documents?:string[];
+export type DemoApplication = {
+  id: string;
+  status: string;
+  appointment: string;
+  rto: string;
+  submittedAt: string;
+  fullName: string;
+  appointmentId?: string;
+  paymentReference?: string;
+  paymentMethod?: string;
+  feeTotal?: string;
+  identity?: string;
+  dob?: string;
+  guardian?: string;
+  gender?: string;
+  mobile?: string;
+  pan?: string;
+  medicalStatus?: string;
+  organDonation?: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  state?: string;
+  vehicle?: string;
+  documents?: string[];
 };
 export type DemoAadhaarProfile={aadhaar:string;fullName:string;dob:string;age:number;gender:string;mobile:string;address:string;city:string;district:string;state:string;pincode:string;suggestedRto:string;verifiedAt:string};
 
@@ -20,8 +40,32 @@ export function loadDraft():Draft{if(!canUseStorage())return emptyDraft;try{retu
 export function saveDraft(draft:Draft){if(canUseStorage())localStorage.setItem("smart-rto-draft",JSON.stringify({...draft,updatedAt:new Date().toISOString()}))}
 export function setSession(value=true){if(canUseStorage())localStorage.setItem("smart-rto-session",value?"demo-user-001":"")}
 export function hasSession(){return canUseStorage()&&localStorage.getItem("smart-rto-session")==="demo-user-001"}
-export function loadApplication():DemoApplication|null{if(!canUseStorage())return null;try{return JSON.parse(localStorage.getItem("smart-rto-application")||"null")}catch{return null}}
-export function saveApplication(app:DemoApplication){if(canUseStorage())localStorage.setItem("smart-rto-application",JSON.stringify(app))}
+export function loadApplication(): DemoApplication | null {
+  if (!canUseStorage()) return null;
+  try {
+    return JSON.parse(localStorage.getItem("smart-rto-application") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function loadApplicationsList(): DemoApplication[] {
+  if (!canUseStorage()) return [];
+  try {
+    return JSON.parse(localStorage.getItem("smart-rto-applications-list") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+export function saveApplication(app: DemoApplication) {
+  if (!canUseStorage()) return;
+  localStorage.setItem("smart-rto-application", JSON.stringify(app));
+  const list = loadApplicationsList();
+  const filtered = list.filter((item) => item.id !== app.id);
+  const updated = [app, ...filtered];
+  localStorage.setItem("smart-rto-applications-list", JSON.stringify(updated));
+}
 export function newApplicationId(){return `SRTO-LL-2026-${String(Math.floor(100000+Math.random()*900000))}`}
 export function newPaymentReference(){return `TESTPAY-2026-${String(Math.floor(100000+Math.random()*900000))}`}
 export function newAppointmentId(){return `APT-${String(Math.floor(10000+Math.random()*90000))}`}

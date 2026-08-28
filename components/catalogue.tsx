@@ -8,6 +8,7 @@ import {
   Clock3,
   FileText,
   Gavel,
+  IdCard,
   Info,
   Search,
   ShieldCheck,
@@ -15,6 +16,17 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { PageShell } from "./page-shell";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const catalog = [
   {
@@ -29,11 +41,11 @@ const catalog = [
         icon: FileText,
       },
       {
-        t: "Driving Licence Services",
-        d: "Guidance for new, renewal and duplicate licences.",
-        h: "/guides/driving-licence",
-        live: false,
-        icon: Info,
+        t: "Permanent Driving Licence (DL)",
+        d: "Apply for Permanent Driving Licence after approved Learner Licence.",
+        h: "/apply/permanent-licence",
+        live: true,
+        icon: IdCard,
       },
     ],
   },
@@ -49,25 +61,18 @@ const catalog = [
         icon: Car,
       },
       {
-        t: "Registration guidance",
-        d: "Understand RC services in simple language.",
-        h: "/guides/vehicle-services",
-        live: false,
-        icon: Info,
+        t: "Vehicle Transfer Service",
+        d: "Apply for online ownership transfer and RC endorsement.",
+        h: "/vehicles",
+        live: true,
+        icon: Car,
       },
     ],
   },
   {
     cat: "Visits & support",
-    description: "Manage appointments, challans and service issues.",
+    description: "Manage challans and service issues.",
     items: [
-      {
-        t: "Appointments",
-        d: "Book or manage a simulated RTO visit.",
-        h: "/appointments",
-        live: true,
-        icon: Clock3,
-      },
       {
         t: "eChallan",
         d: "Check and pay a fictional demonstration challan.",
@@ -102,7 +107,7 @@ export function Services() {
               Service catalogue
             </p>
 
-            <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">
+            <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
               What can we help you with?
             </h1>
 
@@ -148,21 +153,17 @@ export function Services() {
                   const Icon = item.icon;
 
                   return (
-                    <Link
-                      href={item.h}
+                    <Card
                       key={item.t}
-                      className="group flex min-h-[220px] flex-col justify-between rounded-2xl border border-[#dce8e5] bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-[#167c74] hover:shadow-md"
+                      className="group flex min-h-[220px] flex-col justify-between transition-all hover:-translate-y-1 hover:border-[#167c74] hover:shadow-md"
                     >
-                      <div className="flex items-center justify-between">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#ddf3ef] text-[#167c74]">
                           <Icon size={22} />
                         </div>
-
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${item.live
-                              ? "bg-[#e7f4ed] text-[#0d5c45]"
-                              : "bg-slate-100 text-[#5e6f68]"
-                            }`}
+                        <Badge
+                          variant={item.live ? "success" : "outline"}
+                          className="gap-1.5 font-bold"
                         >
                           {item.live ? (
                             <>
@@ -175,26 +176,34 @@ export function Services() {
                               Guidance only
                             </>
                           )}
-                        </span>
-                      </div>
+                        </Badge>
+                      </CardHeader>
 
-                      <div className="my-4">
-                        <h3 className="text-base font-bold text-[#152321] group-hover:text-[#167c74]">
+                      <CardContent className="my-2">
+                        <CardTitle className="text-base group-hover:text-[#167c74]">
                           {item.t}
-                        </h3>
-                        <p className="mt-1 text-xs leading-relaxed text-[#5e6f68]">
+                        </CardTitle>
+                        <CardDescription className="mt-1">
                           {item.d}
-                        </p>
-                      </div>
+                        </CardDescription>
+                      </CardContent>
 
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#167c74]">
-                        <span>{item.live ? "Start service" : "Read guidance"}</span>
-                        <ArrowRight
-                          size={15}
-                          className="transition-transform group-hover:translate-x-1"
-                        />
-                      </div>
-                    </Link>
+                      <CardFooter className="pt-2">
+                        <Button
+                          variant="link"
+                          className="p-0 text-xs font-bold text-[#167c74] group-hover:text-[#0d5c45]"
+                          asChild
+                        >
+                          <Link href={item.h} className="flex items-center gap-1.5">
+                            <span>{item.live ? "Start service" : "Read guidance"}</span>
+                            <ArrowRight
+                              size={15}
+                              className="transition-transform group-hover:translate-x-1"
+                            />
+                          </Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
                   );
                 })}
               </div>
@@ -227,7 +236,7 @@ export function VehicleCheck() {
               <p className="text-xs font-bold uppercase tracking-widest text-[#0f7655]">
                 Synthetic Vehicle Records
               </p>
-              <h1 className="my-1 text-3xl font-extrabold tracking-tight text-[#152321] md:text-5xl">
+              <h1 className="my-1 text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
                 Check a demo vehicle
               </h1>
             </div>
@@ -368,7 +377,7 @@ export function ChallanCheck() {
               <p className="text-xs font-bold uppercase tracking-widest text-[#0f7655]">
                 Demo eChallan Portal
               </p>
-              <h1 className="my-1 text-3xl font-extrabold tracking-tight text-[#152321] md:text-5xl">
+              <h1 className="my-1 text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
                 Check a fictional challan
               </h1>
             </div>

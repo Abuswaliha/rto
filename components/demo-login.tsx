@@ -40,7 +40,11 @@ export function DemoLogin() {
     }
 
     setSession();
-    router.push("/dashboard");
+    const next = new URLSearchParams(window.location.search).get("next");
+    const destination = next?.startsWith("/") && !next.startsWith("//")
+      ? next
+      : "/dashboard";
+    router.push(destination);
   }
 
   function fillDemo() {

@@ -1,31 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "./safe-link";
 import { useRouter } from "next/navigation";
+import { PageShell } from "./page-shell";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Bot,
+  CalendarDays,
   Check,
   CheckCircle2,
-  ChevronRight,
-  CircleHelp,
   Clock3,
-  Home,
+  Download,
+  FileCheck2,
+  FileText,
   IdCard,
-  Info,
   Landmark,
   Loader2,
   LockKeyhole,
-  Save,
+  QrCode,
+  Search,
   ShieldCheck,
   Sparkles,
   UploadCloud,
+  UserCheck,
 } from "lucide-react";
 import Image from "next/image";
-import { LanguageSwitcher } from "./language-provider";
 import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  DemoApplication,
   Draft,
   createDemoAadhaarProfile,
   DEMO_AADHAAR_NUMBER,
@@ -38,900 +54,872 @@ import {
   saveDemoProfile,
   saveDraft,
 } from "@/lib/storage";
-import { appointmentParts, appointmentSlots } from "@/lib/appointment";
+import {
+  isAppwriteConfigured,
+  saveApplicationRecord,
+} from "@/lib/appwrite";
+import { downloadApplicationPdf } from "@/lib/demo-pdf";
 
-const steps = [
-  "Demo Aadhaar",
-  "Eligibility",
-  "Personal details",
-  "Address & RTO",
-  "Documents",
-  "Appointment",
-  "Review",
-  "Test payment",
+interface VehicleClassOption {
+  id: string;
+  code: string;
+  name: string;
+  desc: string;
+  icon: string;
+  badge: string;
+  fee: number;
+}
+
+const VEHICLE_CLASSES: VehicleClassOption[] = [
+  {
+    id: "mcwog",
+    code: "MCWOG",
+    name: "Motorcycle Without Gear",
+    desc: "Scooters, Mopeds, Electric 2-Wheelers (e.g. Activa, Jupiter, Ola S1)",
+    icon: "🛵",
+    badge: "Two Wheeler (Non-Geared)",
+    fee: 150,
+  },
+  {
+    id: "mcwg",
+    code: "MCWG",
+    name: "Motorcycle With Gear",
+    desc: "All Geared Motorcycles, Commuter & Sports Bikes (e.g. Splendor, Pulsar, RE)",
+    icon: "🏍️",
+    badge: "Two Wheeler (Geared)",
+    fee: 150,
+  },
+  {
+    id: "lmv",
+    code: "LMV",
+    name: "Light Motor Vehicle",
+    desc: "Cars, Jeeps, Sedans, Hatchbacks, SUVs, Light Taxis",
+    icon: "🚗",
+    badge: "Four Wheeler (Light)",
+    fee: 150,
+  },
+  {
+    id: "hmv",
+    code: "HMV / Commercial",
+    name: "Heavy / Commercial Vehicle (Big Vehicle)",
+    desc: "Heavy Goods Transport, Multi-Axle Trucks, Passenger Buses",
+    icon: "🚛",
+    badge: "Commercial / Heavy",
+    fee: 250,
+  },
 ];
 
-const renderOptions = (
-  values: string[],
-  value: string,
-  set: (v: string) => void,
-  locked = false
-) => (
-  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
-    {values.map((v) => {
-      const selected = value === v;
-      return (
-        <button
-          type="button"
-          disabled={locked}
-          className={`flex items-center gap-3 rounded-xl border p-3 text-left text-xs font-bold transition-all ${locked ? "cursor-not-allowed opacity-70" : ""} ${
-            selected
-              ? "border-[#167c74] bg-[#edf7f4] text-[#167c74] shadow-sm ring-2 ring-[#167c74]/20"
-              : `border-[#d0e2dc] bg-white text-[#263a33] ${locked ? "" : "hover:border-[#167c74] hover:bg-[#f4fbf8]"}`
-          }`}
-          onClick={() => set(v)}
-          key={v}
-        >
-          <span
-            className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] ${
-              selected
-                ? "border-[#167c74] bg-[#167c74] text-white"
-                : "border-[#b8d4cb] bg-white"
-            }`}
-          >
-            {selected && <Check size={12} />}
-          </span>
-          <span className="leading-snug">{v}</span>
-        </button>
-      );
-    })}
-  </div>
-);
+const AVAILABLE_DATES = [
+  { dateStr: "29 Aug 2026", day: "Friday", shortDate: "29 Aug", slotsCount: "18 slots open" },
+  { dateStr: "30 Aug 2026", day: "Saturday", shortDate: "30 Aug", slotsCount: "24 slots open" },
+  { dateStr: "31 Aug 2026", day: "Monday", shortDate: "31 Aug", slotsCount: "15 slots open" },
+  { dateStr: "01 Sep 2026", day: "Tuesday", shortDate: "01 Sep", slotsCount: "30 slots open" },
+  { dateStr: "02 Sep 2026", day: "Wednesday", shortDate: "02 Sep", slotsCount: "20 slots open" },
+];
+
+const AVAILABLE_TIMES = [
+  { timeStr: "09:30 AM", label: "09:30 AM – 10:30 AM", batch: "Morning Session" },
+  { timeStr: "11:20 AM", label: "11:20 AM – 12:20 PM", batch: "Recommended" },
+  { timeStr: "02:30 PM", label: "02:30 PM – 03:30 PM", batch: "Afternoon Session" },
+  { timeStr: "04:15 PM", label: "04:15 PM – 05:15 PM", batch: "Evening Session" },
+];
+
+const RTO_OFFICES = [
+  "MH-10 Sangli RTO",
+  "MH-09 Kolhapur RTO",
+  "MH-12 Pune RTO",
+  "MH-01 Mumbai Central RTO",
+  "MH-02 Mumbai West RTO",
+];
 
 export function LearnerFlow() {
   const router = useRouter();
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState<number>(0);
   const [error, setError] = useState("");
-  const [assistant, setAssistant] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [aadhaarLookup, setAadhaarLookup] = useState<"idle" | "loading" | "found" | "error">("idle");
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDraft(loadDraft());
-      setLoaded(true);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  // Step 1: Aadhaar & PAN eKYC
+  const [aadhaarNumber, setAadhaarNumber] = useState("9999 8888 7777");
+  const [panNumber, setPanNumber] = useState("ABCDE1234F");
+  const [fullName, setFullName] = useState("Demo Citizen");
+  const [dob, setDob] = useState("15/01/2000");
+  const [guardianName, setGuardianName] = useState("Ramesh Citizen");
+  const [gender, setGender] = useState("Male");
+  const [mobile, setMobile] = useState("9999999999");
+  const [address, setAddress] = useState("Flat 402, Green Avenue, Sangli 416416");
+  const [ekycVerified, setEkycVerified] = useState(true);
 
-  useEffect(() => {
-    if (!loaded) return;
-    queueMicrotask(() => setSaving(true));
-    const timer = setTimeout(() => {
-      saveDraft(draft);
-      setSaving(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [draft, loaded]);
+  // Step 2: Medical Disability Checklist & Declaration (Form 1)
+  const [noEpilepsy, setNoEpilepsy] = useState(true);
+  const [normalVision, setNormalVision] = useState(true);
+  const [noDisability, setNoDisability] = useState(true);
+  const [normalHearing, setNormalHearing] = useState(true);
+  const [organDonation, setOrganDonation] = useState(true);
+  const [medicalDeclaration, setMedicalDeclaration] = useState(true);
 
-  const update = <K extends keyof Draft>(key: K, value: Draft[K]) =>
-    setDraft((d) => ({ ...d, [key]: value }));
+  // Step 3: Vehicle Type Selection Cards
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(["mcwg", "lmv"]);
 
-  const valid = useMemo(
-    () =>
-      [
-        draft.aadhaarVerified,
-        Boolean(draft.age && draft.vehicle),
-        Boolean(draft.fullName && draft.guardian && draft.gender),
-        Boolean(draft.address && draft.pincode.length === 6 && draft.rto),
-        draft.documents.length >= 3,
-        Boolean(draft.appointment),
-        draft.declaration,
-        Boolean(draft.payment),
-      ][draft.step],
-    [draft]
-  );
+  // Step 4: Document Verification (DigiLocker vs Manual)
+  const [docMethod, setDocMethod] = useState<"digilocker" | "manual">("digilocker");
+  const [digilockerLinked, setDigilockerLinked] = useState(true);
+  const [manualDocsUploaded, setManualDocsUploaded] = useState(false);
 
-  function next() {
-    if (!valid) {
-      setError("Complete the required information before continuing.");
-      return;
-    }
+  // Step 5: Test Date & Time Slot + RTO
+  const [rtoOffice, setRtoOffice] = useState("MH-10 Sangli RTO");
+  const [selectedDate, setSelectedDate] = useState("29 Aug");
+  const [selectedTime, setSelectedTime] = useState("11:20 AM");
+
+  // Submitted Record
+  const [submittedApp, setSubmittedApp] = useState<DemoApplication | null>(null);
+
+  function autofillAadhaarDemo() {
+    setAadhaarNumber("9999 8888 7777");
+    setPanNumber("ABCDE1234F");
+    setFullName("Demo Citizen");
+    setDob("15/01/2000");
+    setGuardianName("Ramesh Citizen");
+    setGender("Male");
+    setMobile("9999999999");
+    setAddress("Flat 402, Green Avenue, Sangli 416416");
+    setEkycVerified(true);
     setError("");
-    if (draft.step < 7) {
-      update("step", draft.step + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
+  }
+
+  function toggleVehicleClass(id: string) {
+    if (selectedClasses.includes(id)) {
+      if (selectedClasses.length > 1) {
+        setSelectedClasses(selectedClasses.filter((item) => item !== id));
+      }
+    } else {
+      setSelectedClasses([...selectedClasses, id]);
     }
+  }
+
+  const selectedCodes = VEHICLE_CLASSES.filter((v) => selectedClasses.includes(v.id)).map(
+    (v) => v.code,
+  );
+  const totalFee = 150 + 20; // 150 LL Fee + 20 Online Computer Test Fee
+
+  async function submitLearnerApplication() {
     setProcessing(true);
+    const appId = newApplicationId();
+    const paymentRef = newPaymentReference();
+    const appointmentId = newAppointmentId();
+    const appointmentSlot = `${selectedDate} · ${selectedTime}`;
+
+    if (isAppwriteConfigured) {
+      try {
+        await saveApplicationRecord({
+          userId: "user_123456",
+          app_type: "Learner Licence",
+          app_detail: {
+            applicationNumber: appId,
+            service: {
+              id: "learner-licence",
+              name: "Learner Licence (Form 2)",
+              category: "Driving Licence",
+            },
+            applicant: {
+              fullName,
+              dob,
+              gender,
+              mobile,
+              guardian: guardianName,
+              address,
+              aadhaarNumber,
+              panNumber,
+            },
+            vehicleClass: selectedCodes.join(", "),
+            medicalFitness: {
+              epilepsyFree: noEpilepsy,
+              visionNormal: normalVision,
+              disabilityFree: noDisability,
+              organPledged: organDonation,
+            },
+            rto: rtoOffice,
+            appointment: {
+              id: appointmentId,
+              slot: appointmentSlot,
+              venue: `${rtoOffice} - Computer Exam Room 4`,
+            },
+            payment: {
+              amount: totalFee,
+              currency: "INR",
+              status: "paid",
+              reference: paymentRef,
+              method: "Demo Online UPI",
+            },
+            status: {
+              code: "APPOINTMENT_SCHEDULED",
+              label: "Appointment Scheduled · Ready for Computer Exam",
+              updatedAt: new Date().toISOString(),
+            },
+          },
+          documentId: appId.toLowerCase().replace(/[^a-z0-9]/g, "-"),
+        });
+      } catch (err) {
+        console.warn("Appwrite LL sync note:", err);
+      }
+    }
+
+    const applicationRecord: DemoApplication = {
+      id: appId,
+      status: "appointment-scheduled",
+      appointment: appointmentSlot,
+      rto: rtoOffice,
+      submittedAt: new Date().toISOString(),
+      fullName,
+      appointmentId,
+      paymentReference: paymentRef,
+      paymentMethod: "Demo Online UPI",
+      feeTotal: `INR ${totalFee}.00 (Paid)`,
+      identity: aadhaarNumber,
+      pan: panNumber,
+      dob,
+      guardian: guardianName,
+      gender,
+      mobile,
+      pincode: "416416",
+      city: "Sangli",
+      address,
+      state: "Maharashtra",
+      vehicle: selectedCodes.join(" / "),
+      medicalStatus: "Fit (Form 1 Self-Declaration Attested)",
+      organDonation: organDonation ? "Yes (Pledged for Road Safety)" : "No",
+      documents: ["Aadhaar eKYC", "PAN Record", "Form 1 Medical Declaration", "Age Proof"],
+    };
+
+    saveApplication(applicationRecord);
+
     setTimeout(() => {
-      const id = newApplicationId();
-      const paymentReference = newPaymentReference();
-      saveApplication({
-        id,
-        status: "appointment-scheduled",
-        appointment: draft.appointment,
-        rto: draft.rto,
-        submittedAt: new Date().toISOString(),
-        fullName: draft.fullName,
-        appointmentId: newAppointmentId(),
-        paymentReference,
-        paymentMethod: draft.payment,
-        feeTotal: "₹170 Demo",
-        identity: `${draft.identity} · XXXX 1234`,
-        dob: draft.dob,
-        guardian: draft.guardian,
-        gender: draft.gender,
-        address: draft.address,
-        city: draft.city,
-        pincode: draft.pincode,
-        state: draft.state,
-        vehicle: draft.vehicle,
-        documents: draft.documents,
-      });
+      setSubmittedApp(applicationRecord);
       setProcessing(false);
-      router.push(`/track?submitted=${id}`);
-    }, 1300);
-  }
-
-  function detectDemoAadhaar(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 12);
-    setDraft((current) => ({ ...current, aadhaar: digits, aadhaarVerified: false }));
-    setError("");
-    if (digits.length < 12) {
-      setAadhaarLookup("idle");
-      return;
-    }
-    if (digits !== DEMO_AADHAAR_NUMBER) {
-      setAadhaarLookup("error");
-      return;
-    }
-    setAadhaarLookup("loading");
-    window.setTimeout(() => {
-      const profile = createDemoAadhaarProfile();
-      saveDemoProfile(profile);
-      setDraft((current) => ({
-        ...current,
-        identity: "Demo Aadhaar",
-        aadhaar: profile.aadhaar,
-        aadhaarVerified: true,
-        dob: profile.dob,
-        age: String(profile.age),
-        mobile: profile.mobile,
-        fullName: profile.fullName,
-        gender: profile.gender,
-        pincode: profile.pincode,
-        city: profile.city,
-        address: profile.address,
-        state: profile.state,
-        rto: profile.suggestedRto,
-      }));
-      setAadhaarLookup("found");
-    }, 500);
-  }
-
-  function back() {
-    if (draft.step > 0) {
-      update("step", draft.step - 1);
-      setError("");
-    }
-  }
-
-  if (!loaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7fbfa] text-sm font-bold text-[#167c74]">
-        <Loader2 className="mr-2 animate-spin" size={20} /> Restoring your saved draft…
-      </div>
-    );
+    }, 800);
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f9f7] text-[#152321]">
-      {/* Top Application Header */}
-      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-[#dce8e5] bg-white px-4 shadow-xs md:px-8">
-        <Link href="/dashboard" className="flex items-center gap-3 no-underline">
-          <Image
-            src="/smart-rto-icon.png"
-            alt=""
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-xl object-contain"
-          />
-          <span className="flex flex-col text-sm font-black text-[#152321] leading-tight">
-            Smart RTO
-            <small className="text-[10px] font-semibold text-[#5e6f68] uppercase tracking-wider">
-              Citizen portal
-            </small>
-          </span>
-        </Link>
-
-        <div className="hidden items-center gap-2 sm:flex">
-          <span className="rounded-md bg-[#fff1eb] px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#a64524]">
-            Demo / Mock service
-          </span>
-          <strong className="text-xs font-extrabold text-[#152321]">Learner Licence Application</strong>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher compact />
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce8e5] bg-white px-3 py-1.5 text-xs font-bold text-[#5e6f68] transition-colors hover:bg-slate-50"
-          >
-            <Save size={14} /> Save & exit
-          </Link>
-        </div>
-      </header>
-
-      {/* Main Flow Layout */}
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-8 md:px-6 lg:grid-cols-[260px_1fr_260px]">
-        {/* Step Progress Sidebar */}
-        <aside className="rounded-3xl border border-[#dce8e5] bg-white p-5 shadow-xs h-fit">
-          <p className="mb-4 text-xs font-extrabold uppercase tracking-wider text-[#0f7655]">
-            Application progress
+    <PageShell>
+      {/* Hero Header */}
+      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-10">
+        <div className="mx-auto max-w-5xl px-6">
+          <Badge variant="secondary" className="mb-2 gap-1.5 font-bold">
+            <FileText size={14} className="text-[#167c74]" /> Form 2 · Ministry of Road Transport & Highways
+          </Badge>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
+            Learner Licence (LL) Application
+          </h1>
+          <p className="mt-1 max-w-2xl text-xs font-medium text-[#5e6f68] md:text-sm">
+            Apply online for Form 2 Learner Licence with digital Aadhaar eKYC, Form 1 physical fitness declaration, and live computer test slot booking.
           </p>
-          <ol className="space-y-2">
-            {steps.map((s, i) => {
-              const done = i < draft.step;
-              const active = i === draft.step;
-              return (
-                <li
-                  key={s}
-                  className={`flex items-center gap-3 rounded-xl p-2.5 text-xs font-bold transition-all ${
-                    active
-                      ? "bg-[#167c74] text-white shadow-sm"
-                      : done
-                      ? "bg-[#edf7f4] text-[#0d5c45]"
-                      : "text-slate-400"
+        </div>
+      </section>
+
+      {/* Main Content Area */}
+      <main className="mx-auto max-w-5xl px-6 py-10">
+        {!submittedApp ? (
+          <div className="space-y-8">
+            {/* 5-Step Process Indicator */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {[
+                { id: 0, title: "1. Identity eKYC", sub: "Aadhaar & PAN" },
+                { id: 1, title: "2. Declaration", sub: "Form 1 Medical" },
+                { id: 2, title: "3. Vehicle Types", sub: "Select classes" },
+                { id: 3, title: "4. Documents", sub: "DigiLocker sync" },
+                { id: 4, title: "5. Slot & Pay", sub: "Test date & ₹170" },
+              ].map((s) => (
+                <Card
+                  key={s.id}
+                  className={`p-3.5 transition-all ${
+                    step === s.id
+                      ? "border-[#167c74] bg-white ring-2 ring-[#167c74]/20"
+                      : step > s.id
+                      ? "border-[#cfe3dd] bg-[#edf7f4] text-[#167c74]"
+                      : "border-slate-100 bg-white/60 text-[#8ba098]"
                   }`}
                 >
-                  <i
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-black not-italic ${
-                      active
-                        ? "bg-white text-[#167c74]"
-                        : done
-                        ? "bg-[#0d5c45] text-white"
-                        : "bg-slate-100 text-slate-400"
-                    }`}
-                  >
-                    {done ? <Check size={13} /> : i + 1}
-                  </i>
-                  <span className="flex flex-col leading-tight">
-                    <span>{s}</span>
-                    <small
-                      className={`text-[9px] font-semibold ${
-                        active
-                          ? "text-white/80"
-                          : done
-                          ? "text-[#0d5c45]/70"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {done ? "Complete" : active ? "In progress" : "Not started"}
-                    </small>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-
-          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#edf7f4] p-3 text-xs text-[#0f7655]">
-            <Clock3 size={20} className="shrink-0 text-[#167c74]" />
-            <div>
-              <strong className="block font-extrabold">About {Math.max(2, 8 - draft.step)} min left</strong>
-              <span className="text-[10px] text-[#5e6f68]">Draft saves automatically</span>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Form Content */}
-        <main className="min-w-0 space-y-6">
-          {/* Mobile Progress Bar */}
-          <div className="rounded-2xl border border-[#dce8e5] bg-white p-4 shadow-xs lg:hidden">
-            <div className="flex justify-between text-xs font-bold text-[#152321]">
-              <span>Step {draft.step + 1} of 8</span>
-              <span className="text-[#167c74]">{steps[draft.step]}</span>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full bg-[#167c74] transition-all duration-300"
-                style={{ width: `${((draft.step + 1) / 8) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Form Header Title */}
-          <div className="rounded-3xl border border-[#dce8e5] bg-white p-6 shadow-xs sm:p-8">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-[#0f7655]">
-              Step {draft.step + 1} of 8
-            </span>
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#152321] md:text-3xl">
-              {stepTitle(draft.step)}
-            </h1>
-            <p className="mt-2 text-xs font-medium leading-relaxed text-[#5e6f68]">
-              {stepCopy(draft.step)}
-            </p>
-
-            {/* Step Body */}
-            <div className="mt-6 space-y-5 border-t border-slate-100 pt-6">
-              {renderStep(draft, update, detectDemoAadhaar, aadhaarLookup)}
-
-              {error && (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-[#f5d1c2] bg-[#fff5f1] p-4 text-xs font-bold text-[#a64524]" role="alert">
-                  <Info size={18} className="shrink-0" />
-                  {error}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Actions Bar */}
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6">
-              <button
-                type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#dce8e5] bg-white px-5 text-xs font-bold text-[#152321] transition-colors hover:bg-slate-50 disabled:opacity-40"
-                onClick={back}
-                disabled={draft.step === 0}
-              >
-                <ArrowLeft size={16} /> Back
-              </button>
-
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-[#0d5c45]">
-                {saving ? (
-                  <>
-                    <Loader2 className="animate-spin text-[#167c74]" size={15} /> Saving…
-                  </>
-                ) : (
-                  <>
-                    <Check size={15} className="text-[#0d5c45]" /> Draft saved
-                  </>
-                )}
-              </span>
-
-              <button
-                type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#167c74] px-6 text-xs font-bold text-white shadow-md shadow-[#167c74]/20 transition-all hover:bg-[#126b64] disabled:opacity-50"
-                onClick={next}
-                disabled={processing}
-              >
-                {processing ? (
-                  <>
-                    <Loader2 className="animate-spin" size={16} /> Processing test payment…
-                  </>
-                ) : (
-                  <>
-                    {draft.step === 7 ? "Complete test payment" : "Save & continue"}
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 rounded-2xl bg-[#edf7f4] p-4 text-xs font-medium text-[#0f7655]">
-            <Info size={17} className="shrink-0" />
-            <span>Exact documents, fees and procedures can differ by state. This is a simplified demonstration flow.</span>
-          </div>
-        </main>
-
-        {/* Right Help Rail / Assistant */}
-        <aside className="space-y-5 h-fit">
-          <div className="rounded-3xl border border-[#cfe3dd] bg-gradient-to-br from-[#edf7f4] to-white p-6 shadow-xs">
-            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#0f7655]">
-              <Sparkles size={16} /> Demo assistant
-            </span>
-            <h3 className="mt-2 text-base font-extrabold text-[#152321]">Need help with this step?</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[#5e6f68]">
-              {assistant
-                ? assistantCopy(draft.step)
-                : "Get a plain-language explanation using only this mock application context."}
-            </p>
-            <button
-              type="button"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#167c74] bg-white py-2.5 text-xs font-bold text-[#167c74] transition-colors hover:bg-[#ddf3ef]"
-              onClick={() => setAssistant((v) => !v)}
-            >
-              <Bot size={16} />
-              {assistant ? "Hide explanation" : "Explain this step"}
-            </button>
-          </div>
-
-          <div className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
-            <LockKeyhole size={20} className="shrink-0 text-[#167c74] mt-0.5" />
-            <div>
-              <strong className="block text-xs font-extrabold text-[#152321]">Your privacy</strong>
-              <p className="mt-1 text-xs text-[#5e6f68]">Do not enter real Aadhaar, PAN or document details.</p>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function field(label: string, required = true, help?: string) {
-  return (
-    <div className="flex items-center justify-between mb-1.5">
-      <span className="text-xs font-bold text-[#152321]">
-        {label} {required && <span className="ml-1 font-bold text-red-500">*</span>}
-      </span>
-      {help && (
-        <button
-          type="button"
-          aria-label={`Why ${label} is needed`}
-          title={help}
-          className="text-[#167c74] hover:text-[#126b64]"
-        >
-          <CircleHelp size={15} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function renderStep(
-  d: Draft,
-  u: <K extends keyof Draft>(k: K, v: Draft[K]) => void,
-  detectAadhaar: (value: string) => void,
-  aadhaarLookup: "idle" | "loading" | "found" | "error"
-) {
-  switch (d.step) {
-    case 0:
-      return (
-        <div className="space-y-5">
-          <div className="flex items-start gap-3 rounded-2xl border border-[#f5d1c2] bg-[#fff5f1] p-4 text-xs font-semibold text-[#a64524]">
-            <LockKeyhole size={20} className="shrink-0" />
-            <div>
-              <strong className="block font-extrabold">Fictional demo Aadhaar only</strong>
-              <p className="mt-0.5 text-[#5e6f68]">No UIDAI or government system is contacted. Never enter a real Aadhaar number.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[#b9dfd4] bg-[#edf8f5] p-5">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div><span className="text-[10px] font-bold uppercase tracking-wider text-[#5e6f68]">Seeded reviewer number</span><strong className="mt-1 block text-xl font-black tracking-[0.14em] text-[#152321]">9999 8888 7777</strong></div>
-              <button type="button" className="rounded-xl border border-[#167c74] bg-white px-4 py-2 text-xs font-bold text-[#0f7655] hover:bg-[#ddf3ef]" onClick={() => detectAadhaar(DEMO_AADHAAR_NUMBER)}>Use demo Aadhaar</button>
-            </div>
-          </div>
-
-          <label className="block">
-            {field("Demo Aadhaar number")}
-            <div className="relative">
-              <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#167c74]" size={18} />
-              <input
-                aria-describedby="learner-aadhaar-help"
-                value={d.aadhaar.replace(/(.{4})(?=.)/g, "$1 ")}
-                onChange={(event) => detectAadhaar(event.target.value)}
-                inputMode="numeric"
-                placeholder="9999 8888 7777"
-                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm font-bold tracking-wider outline-none focus:ring-4 ${aadhaarLookup === "error" ? "border-[#d96b48] focus:ring-[#fff1eb]" : "border-[#cbdad6] focus:border-[#167c74] focus:ring-[#ddf3ef]"}`}
-              />
-              {aadhaarLookup === "loading" ? <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-[#167c74]" size={18} /> : null}
-            </div>
-            <small id="learner-aadhaar-help" className="mt-1.5 block text-[11px] text-[#5e6f68]">Details are detected automatically when all 12 digits match the fictional number above.</small>
-          </label>
-
-          {aadhaarLookup === "error" ? <p className="rounded-xl bg-[#fff1eb] p-3 text-xs font-bold text-[#a64524]" role="alert">No fictional citizen matches this number. Use 9999 8888 7777 only.</p> : null}
-
-          {d.aadhaarVerified && aadhaarLookup === "found" ? (
-            <div className="rounded-2xl border border-[#b9dfd4] bg-[#edf8f5] p-5" aria-live="polite">
-              <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 shrink-0 text-[#0d5c45]" size={22} /><div><strong className="block text-sm font-extrabold text-[#152321]">Demo Citizen found and fields filled</strong><p className="mt-1 text-xs leading-5 text-[#5e6f68]">Name, birth date, age, gender, mobile, address, city, PIN code, state and suggested RTO are now pre-filled.</p></div></div>
-              <dl className="mt-4 grid gap-3 border-t border-[#cfe3dd] pt-4 text-xs sm:grid-cols-2"><div><dt className="text-[#5e6f68]">Citizen</dt><dd className="font-bold text-[#152321]">{d.fullName}</dd></div><div><dt className="text-[#5e6f68]">Date of birth</dt><dd className="font-bold text-[#152321]">{d.dob}</dd></div><div><dt className="text-[#5e6f68]">Mobile</dt><dd className="font-bold text-[#152321]">{d.mobile}</dd></div><div><dt className="text-[#5e6f68]">Suggested RTO</dt><dd className="font-bold text-[#152321]">{d.rto}</dd></div></dl>
-            </div>
-          ) : null}
-        </div>
-      );
-
-    case 1:
-      return (
-        <div className="space-y-5">
-          <div className="flex items-start gap-3 rounded-2xl bg-[#edf7f4] p-4 text-xs font-semibold text-[#0f7655]">
-            <ShieldCheck size={20} className="shrink-0 text-[#167c74]" />
-            <div>
-              <strong className="block font-extrabold">Quick eligibility check</strong>
-              <p className="mt-0.5 text-[#5e6f68]">Your age and state were filled from the fictional demo record.</p>
-            </div>
-          </div>
-
-          <label className="block">
-            {field("State")}
-            <select value={d.state} disabled={d.aadhaarVerified} onChange={(event) => u("state", event.target.value)} className="h-11 w-full cursor-not-allowed rounded-xl border border-[#d8e0dd] bg-slate-100 px-3.5 text-xs font-semibold text-[#52635d] outline-none disabled:opacity-100"><option>Maharashtra</option><option>Karnataka</option><option>Delhi</option></select>
-          </label>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block">
-              {field("Your age")}
-              <input value={d.age} readOnly={d.aadhaarVerified} onChange={(event) => u("age", event.target.value.replace(/\D/g, "").slice(0, 2))} inputMode="numeric" className="h-11 w-full cursor-not-allowed rounded-xl border border-[#d8e0dd] bg-slate-100 px-3.5 text-xs font-semibold text-[#52635d] outline-none" />
-            </label>
-            <label className="block">
-              {field("Purpose")}
-              <select className="h-11 w-full rounded-xl border border-[#cbdad6] bg-white px-3.5 text-xs font-semibold outline-none focus:border-[#167c74] focus:ring-4 focus:ring-[#ddf3ef]"><option>New Learner Licence</option></select>
-            </label>
-          </div>
-
-          <div>{field("Vehicle category you want to learn", true, "This means the type of vehicle you want permission to learn to drive.")}{renderOptions(["Motorcycle with gear", "Light Motor Vehicle — Car", "Motorcycle and Car"], d.vehicle, (value) => u("vehicle", value))}</div>
-
-          {d.age && d.vehicle ? <div className="flex items-center gap-2.5 rounded-2xl bg-[#e7f4ed] p-4 text-xs font-bold text-[#0d5c45]"><CheckCircle2 size={18} className="shrink-0" /><span>Based on this demo information, you are eligible to continue.</span></div> : null}
-        </div>
-      );
-
-    case 2:
-      return (
-        <div className="space-y-5">
-          <div className="flex items-center gap-2.5 rounded-2xl bg-[#edf7f4] p-4 text-xs font-semibold text-[#0f7655]">
-            <LockKeyhole size={18} className="shrink-0 text-[#167c74]" />
-            <span><strong>Verified demo Aadhaar fields are locked</strong> · Return to the first step to use a different fictional record.</span>
-          </div>
-
-          <label className="block">
-            {field("Full name")}
-            <input
-              value={d.fullName}
-              readOnly={d.aadhaarVerified}
-              onChange={(e) => u("fullName", e.target.value)}
-              placeholder="As shown on your demo proof"
-              className="h-11 w-full cursor-not-allowed rounded-xl border border-[#d8e0dd] bg-slate-100 px-3.5 text-xs font-semibold text-[#52635d] outline-none"
-            />
-          </label>
-
-          <label className="block">
-            {field("Parent or guardian name")}
-            <input
-              value={d.guardian}
-              onChange={(e) => u("guardian", e.target.value)}
-              placeholder="Enter a fictional name"
-              className="h-11 w-full rounded-xl border border-[#cbdad6] bg-white px-3.5 text-xs font-semibold outline-none focus:border-[#167c74] focus:ring-4 focus:ring-[#ddf3ef]"
-            />
-          </label>
-
-          <div>
-            {field("Gender")}
-            {renderOptions(
-              ["Woman", "Man", "Non-binary", "Prefer not to say"],
-              d.gender,
-              (v) => u("gender", v),
-              d.aadhaarVerified
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block">
-              {field("Place of birth", false)}
-              <input
-                placeholder="For example, Sangli"
-                className="h-11 w-full rounded-xl border border-[#cbdad6] bg-white px-3.5 text-xs font-semibold outline-none focus:border-[#167c74] focus:ring-4 focus:ring-[#ddf3ef]"
-              />
-            </label>
-            <label className="block">
-              {field("Blood group", false)}
-              <select className="h-11 w-full rounded-xl border border-[#cbdad6] bg-white px-3.5 text-xs font-semibold outline-none focus:border-[#167c74] focus:ring-4 focus:ring-[#ddf3ef]">
-                <option value="">Prefer not to say</option>
-                <option>O+</option>
-                <option>A+</option>
-                <option>B+</option>
-              </select>
-            </label>
-          </div>
-        </div>
-      );
-
-    case 3:
-      return (
-        <div className="space-y-5">
-          <div className="flex items-center gap-2.5 rounded-2xl bg-[#edf7f4] p-4 text-xs font-semibold text-[#0f7655]"><LockKeyhole size={18} className="shrink-0 text-[#167c74]" /><span><strong>Address and RTO came from the verified demo record</strong> · These fields cannot be edited.</span></div>
-          <label className="block">
-            {field("PIN code")}
-            <input
-              value={d.pincode}
-              readOnly={d.aadhaarVerified}
-              onChange={(e) => u("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
-              inputMode="numeric"
-              className="h-11 w-full cursor-not-allowed rounded-xl border border-[#d8e0dd] bg-slate-100 px-3.5 text-xs font-semibold text-[#52635d] outline-none"
-            />
-          </label>
-
-          {d.pincode.length === 6 && (
-            <div className="flex items-center gap-3 rounded-2xl bg-[#edf7f4] p-4 text-xs font-semibold text-[#0f7655]">
-              <Home size={20} className="shrink-0 text-[#167c74]" />
-              <div>
-                <span className="block text-[10px] uppercase font-bold text-[#5e6f68]">Suggested demo location</span>
-                <strong className="text-sm font-extrabold text-[#152321]">Maharashtra · Sangli</strong>
-              </div>
-            </div>
-          )}
-
-          <label className="block">
-            {field("Present address")}
-            <textarea
-              value={d.address}
-              readOnly={d.aadhaarVerified}
-              onChange={(e) => u("address", e.target.value)}
-              placeholder="House/building, street and locality"
-              rows={3}
-              className="w-full cursor-not-allowed resize-none rounded-xl border border-[#d8e0dd] bg-slate-100 p-3.5 text-xs font-semibold text-[#52635d] outline-none"
-            />
-          </label>
-
-          <label className="flex items-center gap-2 text-xs font-semibold text-[#152321]">
-            <input type="checkbox" defaultChecked className="h-4 w-4 rounded accent-[#167c74]" />
-            Permanent address is the same as present address
-          </label>
-
-          <div>
-            {field("Choose your RTO")}
-            {renderOptions(
-              [
-                "MH-10 Sangli RTO",
-                "MH-12 Pune RTO",
-                "MH-14 Pimpri-Chinchwad RTO",
-              ],
-              d.rto,
-              (v) => u("rto", v),
-              d.aadhaarVerified
-            )}
-          </div>
-
-          <div className="flex items-start gap-3 rounded-2xl bg-[#edf7f4] p-4 text-xs text-[#0f7655]">
-            <Landmark size={20} className="shrink-0 text-[#167c74] mt-0.5" />
-            <div>
-              <strong className="block text-sm font-extrabold text-[#152321]">{d.rto}</strong>
-              <span className="text-[#5e6f68]">Approx. distance: Demo · Typical wait: Low · 12 mock slots available</span>
-            </div>
-          </div>
-        </div>
-      );
-
-    case 4:
-      return (
-        <div className="space-y-5">
-          <div className="space-y-3">
-            <h3 className="text-sm font-extrabold text-[#152321]">Documents needed</h3>
-            <p className="text-xs text-[#5e6f68]">Upload synthetic files only. PDF, JPG or PNG up to 5 MB.</p>
-            {[
-              "Demo identity proof",
-              "Demo address proof",
-              "Demo passport photograph",
-            ].map((name) => {
-              const uploaded = d.documents.includes(name);
-              return (
-                <button
-                  type="button"
-                  key={name}
-                  className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all ${
-                    uploaded
-                      ? "border-[#b9dfd4] bg-[#edf8f5]"
-                      : "border-[#cbdad6] bg-white hover:border-[#167c74]"
-                  }`}
-                  onClick={() =>
-                    u(
-                      "documents",
-                      uploaded
-                        ? d.documents.filter((x) => x !== name)
-                        : [...d.documents, name]
-                    )
-                  }
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs ${
-                        uploaded ? "bg-[#0d5c45] text-white" : "bg-[#ddf3ef] text-[#167c74]"
-                      }`}
-                    >
-                      {uploaded ? <Check size={16} /> : <UploadCloud size={16} />}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      Step {s.id + 1}
                     </span>
+                    {step > s.id && <Check size={14} className="text-[#167c74]" />}
+                  </div>
+                  <strong className="mt-1 block text-xs text-[#152321]">{s.title}</strong>
+                  <span className="text-[10px] text-[#5e6f68]">{s.sub}</span>
+                </Card>
+              ))}
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-700 border border-red-200">
+                <AlertTriangle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* STEP 1: Aadhaar & PAN eKYC Verification */}
+            {step === 0 && (
+              <Card className="p-6 space-y-6">
+                <CardHeader className="p-0 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Step 1: Aadhaar & PAN eKYC Verification</CardTitle>
+                    <CardDescription>
+                      Authenticate your identity through national eKYC database for seamless Learner Licence issuance.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={autofillAadhaarDemo}
+                    className="gap-1.5 text-xs text-[#167c74]"
+                  >
+                    <Sparkles size={14} /> Auto-fill Demo
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <strong className="block text-xs font-bold text-[#152321]">{name}</strong>
-                      <small className="text-[11px] text-[#5e6f68]">
-                        {uploaded ? "Demo file added · Quality check passed" : "Click to add a simulated file"}
-                      </small>
+                      <Label htmlFor="aadhaar">Aadhaar Number (12 Digits)</Label>
+                      <Input
+                        id="aadhaar"
+                        value={aadhaarNumber}
+                        onChange={(e) => setAadhaarNumber(e.target.value)}
+                        className="mt-1.5 font-mono"
+                        placeholder="9999 8888 7777"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pan">PAN Card Number</Label>
+                      <Input
+                        id="pan"
+                        value={panNumber}
+                        onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                        className="mt-1.5 font-mono uppercase"
+                        placeholder="ABCDE1234F"
+                      />
                     </div>
                   </div>
-                  <ChevronRight size={18} className="text-slate-400" />
-                </button>
-              );
-            })}
-          </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-4 text-xs font-medium text-[#0f7655]">
-            <div className="flex items-center gap-3">
-              <Sparkles size={20} className="shrink-0 text-[#167c74]" />
-              <div>
-                <strong className="block font-bold text-[#152321]">Demo OCR preview</strong>
-                <span>We found: Demo Citizen · 15 Jan 2000 · Demo Address</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="rounded-xl border border-[#167c74] bg-white px-3 py-1.5 text-xs font-bold text-[#167c74] hover:bg-[#ddf3ef]"
-            >
-              Use details
-            </button>
-          </div>
-        </div>
-      );
+                  {ekycVerified && (
+                    <div className="rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-5 text-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-[#cfe3dd] pb-3">
+                        <div className="flex items-center gap-2">
+                          <UserCheck size={18} className="text-[#167c74]" />
+                          <strong className="text-sm font-bold text-[#0d5c45]">
+                            eKYC Authenticated: {fullName}
+                          </strong>
+                        </div>
+                        <Badge variant="success">UIDAI & NSDL Verified</Badge>
+                      </div>
 
-    case 5:
-      const selectedAppointment = appointmentParts(d.appointment || appointmentSlots[0]);
-      return (
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-[#b9dfd4] bg-[#edf8f5] p-4 text-xs text-[#0f7655]">
-            <span className="rounded-md bg-[#167c74] px-2 py-0.5 text-[10px] font-extrabold uppercase text-white">
-              Recommended
-            </span>
-            <strong className="mt-2 block text-lg font-black text-[#152321]">{selectedAppointment.longDate}</strong>
-            <p className="mt-0.5 text-[#5e6f68]">Expected wait: Low · Synthetic estimate</p>
-          </div>
-
-          <div>
-            {field("Choose an appointment")}
-            {renderOptions(
-              [...appointmentSlots],
-              d.appointment,
-              (v) => u("appointment", v)
+                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                        <div>
+                          <span className="text-[#5e6f68]">Date of Birth</span>
+                          <strong className="block text-[#152321]">{dob}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#5e6f68]">Father / Guardian</span>
+                          <strong className="block text-[#152321]">{guardianName}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#5e6f68]">Gender / Mobile</span>
+                          <strong className="block text-[#152321]">{gender} · {mobile}</strong>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <span className="text-[#5e6f68]">Residential Address</span>
+                          <strong className="block text-[#152321]">{address}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex justify-end p-0 pt-4 border-t border-slate-100">
+                  <Button onClick={() => setStep(1)} className="gap-2">
+                    Continue to Medical Declaration <ArrowRight size={16} />
+                  </Button>
+                </CardFooter>
+              </Card>
             )}
-          </div>
 
-          <div className="flex gap-4 text-xs font-semibold text-[#5e6f68]">
-            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-[#0d5c45]" /> Available</span>
-            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-[#e87343]" /> Limited</span>
-            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-slate-300" /> Full</span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <b className="block text-base font-black text-[#152321]">27</b>
-              <span className="text-[#5e6f68]">Thu</span>
-              <small className="block mt-1 text-[10px] text-[#0d5c45]">12 slots</small>
-            </div>
-            <div className="rounded-xl border border-[#e87343]/30 bg-[#fff8f4] p-3">
-              <b className="block text-base font-black text-[#152321]">28</b>
-              <span className="text-[#5e6f68]">Fri</span>
-              <small className="block mt-1 text-[10px] text-[#e87343]">3 slots</small>
-            </div>
-            <button type="button" onClick={() => u("appointment", "29 Aug · 11:20 AM")} className={`rounded-xl p-3 ${selectedAppointment.day === "29" ? "border-2 border-[#167c74] bg-[#edf7f4] text-[#167c74]" : "border border-slate-200 bg-white text-[#152321]"}`}>
-              <b className="block text-base font-black">29</b>
-              <span className="font-bold">Sat</span>
-              <small className="mt-1 block text-[10px] font-bold">Rec.</small>
-            </button>
-            <button type="button" onClick={() => u("appointment", "30 Aug · 10:00 AM")} className={`rounded-xl p-3 ${selectedAppointment.day === "30" ? "border-2 border-[#167c74] bg-[#edf7f4] text-[#167c74]" : "border border-slate-200 bg-white text-[#152321]"}`}>
-              <b className="block text-base font-black">30</b>
-              <span className="font-bold">Sun</span>
-              <small className="mt-1 block text-[10px]">8 slots</small>
-            </button>
-          </div>
-        </div>
-      );
-
-    case 6:
-      return (
-        <div className="space-y-5">
-          <div className="space-y-3">
-            {[
-              ["Identity", `${d.identity} · XXXX 1234`],
-              ["Personal information", `${d.fullName} · ${d.dob}`],
-              ["Address", `${d.address}, ${d.city} ${d.pincode}`],
-              ["Vehicle category", d.vehicle],
-              ["RTO", d.rto],
-              ["Documents", `${d.documents.length} demo files added`],
-              ["Appointment", d.appointment],
-            ].map(([a, b], i) => (
-              <div
-                key={a}
-                className="flex items-center justify-between rounded-2xl border border-[#dce8e5] bg-white p-4 text-xs shadow-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <i className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#ddf3ef] font-extrabold not-italic text-[#167c74]">
-                    {i + 1}
-                  </i>
-                  <div>
-                    <strong className="block font-bold text-[#152321]">{a}</strong>
-                    <span className="text-[#5e6f68]">{b}</span>
+            {/* STEP 2: Medical Disability Checklist & Form 1 Self-Declaration */}
+            {step === 1 && (
+              <Card className="p-6 space-y-6">
+                <CardHeader className="p-0">
+                  <CardTitle>Step 2: Form 1 Physical Fitness & Self-Declaration</CardTitle>
+                  <CardDescription>
+                    Statutory medical fitness questions under Section 5 of Central Motor Vehicles Rules 1989.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  <div className="space-y-3">
+                    {[
+                      {
+                        id: "epilepsy",
+                        label: "Do you suffer from epilepsy, sudden attacks of giddiness, or fainting spells?",
+                        val: noEpilepsy,
+                        set: setNoEpilepsy,
+                        note: "Must be 'No' for safe driving fitness",
+                      },
+                      {
+                        id: "vision",
+                        label: "Are you able to distinguish pigmentary colors (Red & Green) and read a vehicle plate at 25m distance?",
+                        val: normalVision,
+                        set: setNormalVision,
+                        note: "Normal visual acuity required",
+                      },
+                      {
+                        id: "disability",
+                        label: "Do you have any physical defect, loss of limbs, or muscular weakness impairing vehicle control?",
+                        val: noDisability,
+                        set: setNoDisability,
+                        note: "Validates motor driving capability",
+                      },
+                      {
+                        id: "hearing",
+                        label: "Do you suffer from severe deafness or night blindness?",
+                        val: normalHearing,
+                        set: setNormalHearing,
+                        note: "Auditory alertness declaration",
+                      },
+                      {
+                        id: "organ",
+                        label: "Organ Donation Pledge: In the event of fatal road accident, I wish to donate my organs.",
+                        val: organDonation,
+                        set: setOrganDonation,
+                        note: "Endorsed on Learner & Smart Card DL",
+                      },
+                    ].map((item, idx) => (
+                      <label
+                        key={item.id}
+                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#cfe3dd] bg-[#f9fbfb] p-3.5 transition hover:bg-[#edf7f4]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.val}
+                          onChange={(e) => item.set(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded accent-[#167c74]"
+                        />
+                        <div className="text-xs">
+                          <strong className="block text-[#152321]">
+                            {idx + 1}. {item.label}
+                          </strong>
+                          <span className="text-[#5e6f68]">{item.note}</span>
+                        </div>
+                      </label>
+                    ))}
                   </div>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-lg border border-[#dce8e5] px-3 py-1.5 text-xs font-bold text-[#167c74] hover:bg-slate-50"
-                  onClick={() => u("step", Math.min(i, 5))}
-                >
-                  Edit
-                </button>
-              </div>
-            ))}
-          </div>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-4 text-xs font-medium text-[#152321]">
-            <input
-              type="checkbox"
-              checked={d.declaration}
-              onChange={(e) => u("declaration", e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded accent-[#167c74]"
-            />
-            <span>
-              <strong className="block font-bold text-[#0d5c45]">Demo declaration</strong>
-              I confirm the information entered is fictional or synthetic and correct for testing this prototype.
-            </span>
-          </label>
-        </div>
-      );
+                  <div className="rounded-xl border border-[#cfe3dd] bg-white p-4">
+                    <label className="flex cursor-pointer items-center gap-3 text-xs font-bold text-[#152321]">
+                      <input
+                        type="checkbox"
+                        checked={medicalDeclaration}
+                        onChange={(e) => setMedicalDeclaration(e.target.checked)}
+                        className="h-4 w-4 rounded accent-[#167c74]"
+                      />
+                      <span>
+                        I solemnly declare that the answers given above are true and complete under CMVR 1989.
+                      </span>
+                    </label>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
+                  <Button variant="outline" onClick={() => setStep(0)}>
+                    <ArrowLeft size={16} className="mr-2" /> Back
+                  </Button>
+                  <Button
+                    onClick={() => setStep(2)}
+                    disabled={!medicalDeclaration}
+                    className="gap-2"
+                  >
+                    Select Vehicle Classes <ArrowRight size={16} />
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
 
-    default:
-      return (
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-[#cfe3dd] bg-[#f8fbf9] p-5 space-y-3">
-            <span className="inline-block rounded-md bg-[#fff1eb] px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#a64524]">
-              Test payment · No money will be charged
-            </span>
-            <h3 className="text-lg font-black text-[#152321]">Application fee breakdown</h3>
-            <div className="flex justify-between text-xs text-[#5e6f68]">
-              <span>Learner Licence fee</span>
-              <strong className="text-[#152321]">₹150 Demo</strong>
-            </div>
-            <div className="flex justify-between text-xs text-[#5e6f68]">
-              <span>Service fee</span>
-              <strong className="text-[#152321]">₹20 Demo</strong>
-            </div>
-            <div className="flex justify-between border-t border-slate-200 pt-3 text-sm font-extrabold text-[#152321]">
-              <span>Total Payable</span>
-              <strong className="text-[#0d5c45]">₹170 Demo</strong>
-            </div>
-          </div>
+            {/* STEP 3: Vehicle Type Selection Cards with Icons */}
+            {step === 2 && (
+              <Card className="p-6 space-y-6">
+                <CardHeader className="p-0">
+                  <CardTitle>Step 3: Select Vehicle Categories for Learner Licence</CardTitle>
+                  <CardDescription>
+                    Choose the vehicle types you want to learn. You may choose multiple categories.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {VEHICLE_CLASSES.map((vc) => {
+                      const isSelected = selectedClasses.includes(vc.id);
+                      return (
+                        <div
+                          key={vc.id}
+                          onClick={() => toggleVehicleClass(vc.id)}
+                          className={`cursor-pointer rounded-2xl border p-5 transition-all hover:scale-[1.01] ${
+                            isSelected
+                              ? "border-[#167c74] bg-[#edf7f4] shadow-sm ring-2 ring-[#167c74]/20"
+                              : "border-[#dce8e5] bg-white hover:border-[#167c74]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-3xl">{vc.icon}</span>
+                            <Badge variant={isSelected ? "success" : "secondary"}>
+                              {isSelected ? "Selected ✓" : "Click to select"}
+                            </Badge>
+                          </div>
+                          <div className="mt-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#0f7655]">
+                              {vc.badge}
+                            </span>
+                            <h3 className="text-base font-extrabold text-[#152321]">
+                              {vc.name} ({vc.code})
+                            </h3>
+                            <p className="mt-1 text-xs text-[#5e6f68] leading-relaxed">{vc.desc}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
-          <div>
-            {field("Choose a test payment method")}
-            {renderOptions(
-              ["Demo UPI", "Demo Card", "Demo Net Banking"],
-              d.payment,
-              (v) => u("payment", v)
+                  <div className="rounded-xl border border-[#cfe3dd] bg-[#f8fbf9] p-4 text-xs flex justify-between items-center">
+                    <div>
+                      <strong className="text-[#152321]">Selected Categories:</strong>
+                      <span className="ml-2 text-[#0d5c45] font-bold">
+                        {VEHICLE_CLASSES.filter((v) => selectedClasses.includes(v.id))
+                          .map((v) => v.code)
+                          .join(", ")}
+                      </span>
+                    </div>
+                    <Badge variant="secondary">Flat LL Fee: ₹170</Badge>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
+                  <Button variant="outline" onClick={() => setStep(1)}>
+                    <ArrowLeft size={16} className="mr-2" /> Back
+                  </Button>
+                  <Button onClick={() => setStep(3)} className="gap-2">
+                    Continue to Documents <ArrowRight size={16} />
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
+
+            {/* STEP 4: Document Verification (DigiLocker vs Manual) */}
+            {step === 3 && (
+              <Card className="p-6 space-y-6">
+                <CardHeader className="p-0">
+                  <CardTitle>Step 4: Document Verification & Digital Locker</CardTitle>
+                  <CardDescription>
+                    Verify your identity and address credentials from national repositories.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 space-y-5">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={docMethod === "digilocker" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDocMethod("digilocker")}
+                    >
+                      Instant DigiLocker Sync (Recommended)
+                    </Button>
+                    <Button
+                      variant={docMethod === "manual" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDocMethod("manual")}
+                    >
+                      Manual Document Upload
+                    </Button>
+                  </div>
+
+                  {docMethod === "digilocker" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#167c74] text-white">
+                              <ShieldCheck size={20} />
+                            </div>
+                            <div>
+                              <strong className="block text-sm font-bold text-[#0d5c45]">
+                                DigiLocker e-Verification Active
+                              </strong>
+                              <span className="text-xs text-[#5e6f68]">
+                                Identity, age and address proof fetched automatically.
+                              </span>
+                            </div>
+                          </div>
+                          <Badge variant="success">Verified ✓</Badge>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {[
+                          { title: "Aadhaar eKYC Certificate", num: aadhaarNumber, authority: "UIDAI" },
+                          { title: "PAN Verification Record", num: panNumber, authority: "Income Tax Dept" },
+                          { title: "Age Proof (10th Certificate)", num: "CERT-2016-8921", authority: "State Board" },
+                          { title: "Form 1 Medical Self-Declaration", num: "MED-FIT-2026", authority: "Smart RTO" },
+                        ].map((doc) => (
+                          <div
+                            key={doc.title}
+                            className="flex items-center justify-between rounded-xl border border-[#cfe3dd] bg-white p-3.5 text-xs"
+                          >
+                            <div>
+                              <strong className="block text-[#152321]">{doc.title}</strong>
+                              <span className="font-mono text-[#5e6f68]">{doc.num} · {doc.authority}</span>
+                            </div>
+                            <CheckCircle2 size={18} className="text-[#0f7655]" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-dashed border-[#167c74] bg-[#f8fbf9] p-6 text-center">
+                        <UploadCloud className="mx-auto text-[#167c74]" size={36} />
+                        <strong className="mt-2 block text-sm text-[#152321]">
+                          Upload Scanned Proof Documents
+                        </strong>
+                        <p className="text-xs text-[#5e6f68]">
+                          Upload 10th marksheet, address proof, and Form 1 (PDF / JPG max 2MB)
+                        </p>
+                        <Button
+                          size="sm"
+                          className="mt-4 gap-1.5"
+                          onClick={() => setManualDocsUploaded(true)}
+                        >
+                          {manualDocsUploaded ? "Documents Attached ✓" : "Select Files"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
+                  <Button variant="outline" onClick={() => setStep(2)}>
+                    <ArrowLeft size={16} className="mr-2" /> Back
+                  </Button>
+                  <Button onClick={() => setStep(4)} className="gap-2">
+                    Pick Test Date & Pay <ArrowRight size={16} />
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
+
+            {/* STEP 5: Review, Select Test Date & Slot, and Pay (₹170) */}
+            {step === 4 && (
+              <Card className="p-6 space-y-6">
+                <CardHeader className="p-0">
+                  <CardTitle>Step 5: Select Test Date & Complete Payment</CardTitle>
+                  <CardDescription>
+                    Select your RTO office, preferred date & time for the computer exam, and pay statutory fee.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 space-y-5">
+                  {/* Summary Box */}
+                  <div className="grid gap-4 rounded-xl border border-[#dce8e5] bg-slate-50/70 p-4 text-xs sm:grid-cols-2">
+                    <div>
+                      <span className="text-[#5e6f68]">Applicant Name</span>
+                      <strong className="block text-[#152321]">{fullName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[#5e6f68]">Identity Verification</span>
+                      <strong className="block font-mono text-[#152321]">Aadhaar · {aadhaarNumber}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[#5e6f68]">Selected Categories</span>
+                      <strong className="block text-[#0d5c45]">
+                        {VEHICLE_CLASSES.filter((v) => selectedClasses.includes(v.id))
+                          .map((v) => `${v.name} (${v.code})`)
+                          .join(", ")}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-[#5e6f68]">Medical Fitness</span>
+                      <strong className="block text-[#152321]">Form 1 Certified · Organ Pledged</strong>
+                    </div>
+                  </div>
+
+                  {/* RTO Office Picker */}
+                  <div>
+                    <Label className="text-xs text-[#5e6f68] font-bold uppercase tracking-wider">
+                      A. Select RTO Office
+                    </Label>
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {RTO_OFFICES.map((rto) => {
+                        const isSelected = rtoOffice === rto;
+                        return (
+                          <button
+                            key={rto}
+                            type="button"
+                            onClick={() => setRtoOffice(rto)}
+                            className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-bold transition-all ${
+                              isSelected
+                                ? "border-[#167c74] bg-[#edf7f4] text-[#167c74] ring-2 ring-[#167c74]/20"
+                                : "border-[#dce8e5] bg-white hover:bg-[#f4fbf8]"
+                            }`}
+                          >
+                            <Landmark size={15} />
+                            <span>{rto}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Test Date Selector */}
+                  <div>
+                    <Label className="text-xs text-[#5e6f68] font-bold uppercase tracking-wider">
+                      B. Select Computer Test Date
+                    </Label>
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      {AVAILABLE_DATES.map((d) => {
+                        const isDateSelected = selectedDate === d.shortDate;
+                        return (
+                          <button
+                            key={d.dateStr}
+                            type="button"
+                            onClick={() => setSelectedDate(d.shortDate)}
+                            className={`flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all ${
+                              isDateSelected
+                                ? "border-[#167c74] bg-[#edf7f4] text-[#167c74] shadow-xs ring-2 ring-[#167c74]/20"
+                                : "border-[#dce8e5] bg-white hover:bg-[#f4fbf8]"
+                            }`}
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-wider">{d.day}</span>
+                            <strong className="text-sm font-black text-[#152321]">{d.shortDate}</strong>
+                            <span className="mt-1 rounded bg-[#ddf3ef] px-1.5 py-0.5 text-[9px] font-bold text-[#0f7655]">
+                              {d.slotsCount}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Test Time Slot Selector */}
+                  <div>
+                    <Label className="text-xs text-[#5e6f68] font-bold uppercase tracking-wider">
+                      C. Select Test Time Window
+                    </Label>
+                    <div className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                      {AVAILABLE_TIMES.map((t) => {
+                        const isTimeSelected = selectedTime === t.timeStr;
+                        return (
+                          <button
+                            key={t.timeStr}
+                            type="button"
+                            onClick={() => setSelectedTime(t.timeStr)}
+                            className={`flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                              isTimeSelected
+                                ? "border-[#167c74] bg-[#edf7f4] text-[#167c74] ring-2 ring-[#167c74]/20"
+                                : "border-[#dce8e5] bg-white hover:bg-[#f4fbf8]"
+                            }`}
+                          >
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-[#0f7655]">
+                                {t.batch}
+                              </span>
+                              <strong className="block text-xs text-[#152321]">{t.label}</strong>
+                            </div>
+                            {isTimeSelected && <Check size={16} className="text-[#167c74]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Confirmed Schedule Badge */}
+                  <div className="rounded-xl border border-[#cfe3dd] bg-[#edf7f4] p-3.5 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={16} className="text-[#167c74]" />
+                      <span className="text-[#5e6f68]">Confirmed Slot:</span>
+                      <strong className="text-[#0d5c45]">{selectedDate} · {selectedTime} at {rtoOffice}</strong>
+                    </div>
+                    <Badge variant="success">Slot Active</Badge>
+                  </div>
+
+                  {/* Fee Breakdown */}
+                  <div className="rounded-xl border border-[#cfe3dd] bg-white p-4 text-xs space-y-2">
+                    <div className="flex justify-between text-[#5e6f68]">
+                      <span>Govt Learner Licence Issuance Fee</span>
+                      <strong className="text-[#152321]">₹150.00</strong>
+                    </div>
+                    <div className="flex justify-between text-[#5e6f68]">
+                      <span>Computer Online Theory Test Fee</span>
+                      <strong className="text-[#152321]">₹20.00</strong>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between text-sm font-extrabold text-[#152321]">
+                      <span>Total Amount Payable</span>
+                      <span className="text-[#0d5c45]">₹170.00 (Demo Test Checkout)</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
+                  <Button variant="outline" onClick={() => setStep(3)} disabled={processing}>
+                    <ArrowLeft size={16} className="mr-2" /> Back
+                  </Button>
+                  <Button
+                    onClick={submitLearnerApplication}
+                    disabled={processing}
+                    className="min-w-[190px] gap-2"
+                  >
+                    {processing ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Processing...
+                      </>
+                    ) : (
+                      <>Pay ₹170 & Book LL Test</>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
             )}
           </div>
+        ) : (
+          /* Success Screen */
+          <Card className="p-8 text-center space-y-6">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#e7f4ed] text-[#0d5c45]">
+              <CheckCircle2 size={40} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-[#152321]">
+                Learner Licence Application Submitted!
+              </h2>
+              <p className="mt-1 text-sm text-[#5e6f68]">
+                Your Form 2 Learner Licence application and computer exam slot have been scheduled.
+              </p>
+            </div>
 
-          <div className="flex items-center gap-3 rounded-2xl bg-[#edf7f4] p-4 text-xs text-[#0f7655]">
-            <ShieldCheck size={20} className="shrink-0 text-[#167c74]" />
-            <span>
-              <strong>Simulated payment only.</strong> No money, bank account or card information is collected.
-            </span>
-          </div>
-        </div>
-      );
-  }
-}
+            <div className="mx-auto max-w-md rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-5 text-xs text-left space-y-2">
+              <div className="flex justify-between">
+                <span className="text-[#5e6f68]">Application Number:</span>
+                <strong className="font-mono text-[#152321]">{submittedApp.id}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5e6f68]">Computer Test Slot:</span>
+                <strong className="text-[#0d5c45]">{submittedApp.appointment}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5e6f68]">RTO Office:</span>
+                <strong className="text-[#152321]">{submittedApp.rto}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5e6f68]">Payment Reference:</span>
+                <strong className="font-mono text-[#152321]">{submittedApp.paymentReference}</strong>
+              </div>
+            </div>
 
-function stepTitle(i: number) {
-  return [
-    "Find and fill your demo details",
-    "Let’s check if you can continue",
-    "Tell us about the applicant",
-    "Confirm your address and RTO",
-    "Add demonstration documents",
-    "Choose your appointment",
-    "Review everything carefully",
-    "Complete the test payment",
-  ][i];
-}
-
-function stepCopy(i: number) {
-  return [
-    "Enter the seeded fictional Aadhaar number and matching fields will fill automatically.",
-    "Confirm the pre-filled age and choose the vehicle category you want to learn.",
-    "We have pre-filled what we already know so you do not need to type it again.",
-    "Enter your PIN code and we will suggest a nearby demo RTO.",
-    "A short checklist helps you add the right synthetic files.",
-    "Pick a clearly labelled mock slot that works for you.",
-    "Check each section and fix only what needs changing.",
-    "No money will be charged and no payment details are collected.",
-  ][i];
-}
-
-function assistantCopy(i: number) {
-  return [
-    "Use only 9999 8888 7777. When all 12 digits are entered, this prototype finds the local fictional citizen and fills matching fields. No UIDAI service is contacted.",
-    "Review the state and calculated age, then choose the kind of vehicle you want to learn. This is only a demo eligibility hint.",
-    "Add a fictional guardian name and choose a gender option. Optional details can be skipped.",
-    "Your demo PIN suggests Sangli and MH-10. You can select another mock office.",
-    "Add all three simulated documents. Nothing is uploaded to a server.",
-    "The recommended slot has a low synthetic wait estimate. Choose any available mock time.",
-    "Review each summary card. The declaration confirms this is fictional demo information.",
-    "Select any demo method, then complete the test payment. No money will move.",
-  ][i];
+            <div className="flex flex-col gap-3 sm:flex-row justify-center">
+              <Button onClick={() => downloadApplicationPdf(submittedApp)} className="gap-2">
+                <Download size={16} /> Download Form 2 Application & Slot Slip PDF
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/track">Track in Applications</Link>
+              </Button>
+            </div>
+          </Card>
+        )}
+      </main>
+    </PageShell>
+  );
 }

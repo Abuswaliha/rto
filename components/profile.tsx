@@ -95,7 +95,7 @@ export function ProfilePage() {
           <p className="text-xs font-bold uppercase tracking-widest text-[#0f7655]">
             Your account
           </p>
-          <h1 className="my-2 text-3xl font-extrabold tracking-tight text-[#152321] md:text-5xl">
+          <h1 className="my-2 text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
             {profile.name}
           </h1>
           <p className="max-w-xl text-sm font-medium text-[#5e6f68]">

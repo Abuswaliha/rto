@@ -19,7 +19,7 @@ export function Grievance() {
           <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-[#0f7655]">
             Mock Grievance Service
           </p>
-          <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-[#152321] md:text-5xl">
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
             {done ? "Grievance submitted" : "Tell us what went wrong"}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-[#5e6f68]">

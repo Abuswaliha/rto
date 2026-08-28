@@ -7,10 +7,15 @@ import { hasSession } from "@/lib/storage";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { LanguageSwitcher } from "./language-provider";
+import {
+  TopNavAccessibilityControls,
+  AccessibilityModal,
+} from "./accessibility-menu";
 
 export function PortalHeader() {
   const [signedIn, setSignedIn] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [accessibilityModalOpen, setAccessibilityModalOpen] = useState(false);
   const pathname = usePathname();
 
   const isCurrent = (href: string) =>
@@ -35,9 +40,15 @@ export function PortalHeader() {
 
   return (
     <>
-      {/* Top Demo Banner */}
-      <div className="flex min-h-[30px] items-center justify-center bg-[#152923] px-4 text-center text-xs tracking-wider text-white">
-        Demo mode · Fictional information only
+      {/* Top Accessibility & Demo Banner */}
+      <div className="flex min-h-[34px] items-center justify-between bg-[#152923] px-4 text-center text-xs tracking-wider text-white md:px-8 lg:px-12">
+        <div className="flex items-center gap-2 text-[11px] text-white/80">
+          <span className="inline-block h-2 w-2 rounded-full bg-[#167c74]" />
+          <span>Demo Mode · Government Transport Prototype</span>
+        </div>
+        <div className="hidden items-center gap-3 sm:flex">
+          <TopNavAccessibilityControls />
+        </div>
       </div>
 
       {/* Main Header Bar */}
@@ -89,20 +100,28 @@ export function PortalHeader() {
               <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
             )}
           </Link>
+          <Link className={navLinkClass("/contact")} href="/contact">
+            Contact
+            {isCurrent("/contact") && (
+              <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
+            )}
+          </Link>
         </nav>
 
         {/* Right Tools Toolbar */}
         <div className="flex items-center gap-2.5 pl-6">
-          <div className="hidden lg:block">
+          <div className="hidden sm:block">
             <LanguageSwitcher compact />
           </div>
-          <Link
+          <button
+            type="button"
+            onClick={() => setAccessibilityModalOpen(true)}
             className="grid h-10 w-10 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74]"
-            href="/accessibility"
-            aria-label="Accessibility"
+            aria-label="Open Accessibility Settings (Zoom & Color Filters)"
+            title="Accessibility Settings (Zoom, Color Blind Modes)"
           >
             <Accessibility size={19} />
-          </Link>
+          </button>
 
           {signedIn ? (
             <>
@@ -141,6 +160,12 @@ export function PortalHeader() {
           </button>
         </div>
       </header>
+
+      {/* Accessibility Modal Dialog */}
+      <AccessibilityModal
+        isOpen={accessibilityModalOpen}
+        onClose={() => setAccessibilityModalOpen(false)}
+      />
 
       {/* Mobile Dropdown Menu Drawer */}
       {menu && (
@@ -185,6 +210,13 @@ export function PortalHeader() {
             >
               Wallet
             </Link>
+            <Link
+              onClick={() => setMenu(false)}
+              className={mobileNavLinkClass("/contact")}
+              href="/contact"
+            >
+              Contact Us
+            </Link>
           </nav>
         </div>
       )}
@@ -221,6 +253,9 @@ export function PrototypeFooter() {
           </Link>
           <Link href="/privacy" className="hover:text-[#ddf3ef]">
             Privacy
+          </Link>
+          <Link href="/contact" className="hover:text-[#ddf3ef]">
+            Contact Us
           </Link>
         </div>
       </div>
