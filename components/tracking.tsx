@@ -135,7 +135,6 @@ const SAMPLE_APPLICATIONS: Record<string, DemoApplication> = {
 };
 
 export function Tracking() {
-  const [app, setApp] = useState<DemoApplication | null>(null);
   const [appsList, setAppsList] = useState<DemoApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentApp, setCurrentApp] = useState<DemoApplication>(
@@ -143,15 +142,17 @@ export function Tracking() {
   );
 
   useEffect(() => {
-    const savedList = loadApplicationsList();
-    setAppsList(savedList);
+    const timer = setTimeout(() => {
+      const savedList = loadApplicationsList();
+      setAppsList(savedList);
 
-    const saved = loadApplication();
-    if (saved && saved.id) {
-      setApp(saved);
-      setCurrentApp(saved);
-      setSearchQuery(saved.id);
-    }
+      const saved = loadApplication();
+      if (saved && saved.id) {
+        setCurrentApp(saved);
+        setSearchQuery(saved.id);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   function performLookup(rawQuery: string) {
@@ -179,7 +180,7 @@ export function Tracking() {
         status: "under-review",
         appointment: "RC Endorsement in Scrutiny",
         rto: "MH-10 Sangli RTO",
-        submittedAt: new Date().toISOString(),
+        submittedAt: "2026-08-28T09:00:00.000Z",
         fullName: "Demo Citizen (Transferee / Buyer)",
         appointmentId: `VT-DOC-${num}`,
         paymentReference: `TESTPAY-VT-${num}`,
@@ -199,7 +200,7 @@ export function Tracking() {
         status: "appointment-scheduled",
         appointment: "02 Sep · 11:30 AM",
         rto: "MH-10 Sangli RTO (Automated Driving Track)",
-        submittedAt: new Date().toISOString(),
+        submittedAt: "2026-08-28T09:00:00.000Z",
         fullName: "Demo Citizen",
         appointmentId: `APT-DL-${num}`,
         paymentReference: `TESTPAY-DL-${num}`,
@@ -216,7 +217,7 @@ export function Tracking() {
         status: "appointment-scheduled",
         appointment: "29 Aug · 11:20 AM",
         rto: "MH-10 Sangli RTO",
-        submittedAt: new Date().toISOString(),
+        submittedAt: "2026-08-28T09:00:00.000Z",
         fullName: "Demo Citizen",
         appointmentId: `APT-LL-${num}`,
         paymentReference: `TESTPAY-LL-${num}`,
@@ -237,7 +238,7 @@ export function Tracking() {
   const isDL = currentApp.id.includes("DL") || (currentApp.vehicle || "").includes("Smart Card");
   const isVT = currentApp.id.includes("VT") || (currentApp.vehicle || "").includes("Tata Nexon");
   const selectedAppointment = appointmentParts(currentApp.appointment);
-  const lastUpdated = new Date(currentApp.submittedAt || Date.now()).toLocaleString("en-IN", {
+  const lastUpdated = new Date(currentApp.submittedAt || "2026-08-28T09:00:00.000Z").toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",

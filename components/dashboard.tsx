@@ -144,12 +144,14 @@ export function Dashboard() {
   const [loadingDb, setLoadingDb] = useState(false);
 
   useEffect(() => {
-    setDraft(loadDraft());
-    const local = loadApplication();
-    setApplication(local);
-    const list = loadApplicationsList();
-    setApplicationsList(list);
-    setProfile(loadDemoProfile());
+    const timer = setTimeout(() => {
+      setDraft(loadDraft());
+      const local = loadApplication();
+      setApplication(local);
+      const list = loadApplicationsList();
+      setApplicationsList(list);
+      setProfile(loadDemoProfile());
+    }, 0);
 
     if (isAppwriteConfigured) {
       setLoadingDb(true);
@@ -162,6 +164,8 @@ export function Dashboard() {
           setLoadingDb(false);
         });
     }
+
+    return () => clearTimeout(timer);
   }, []);
 
   const progress = Math.round(((draft?.step || 0) / 5) * 100);
