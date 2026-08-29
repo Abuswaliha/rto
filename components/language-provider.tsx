@@ -1452,19 +1452,31 @@ function translateText(value: string, language: LanguageCode) {
     return `${lead}${fallbackTranslations[text][language]}${tail}`;
   }
 
+  // Symbol / punctuation stripped match (e.g. "✓ Validated", "• Step 1", "Search:", "Transfer →")
+  const symbolMatch = text.match(/^([✓✔✕✖•·→←⏱₹\-\:\.\(\)\s]+)?(.*?)([✓✔✕✖•·→←⏱₹\-\:\.\(\)\s]+)?$/);
+  if (symbolMatch && symbolMatch[2] && symbolMatch[2] !== text) {
+    const symLead = symbolMatch[1] || "";
+    const coreText = symbolMatch[2].trim();
+    const symTail = symbolMatch[3] || "";
+    const coreTranslated = dictionary.get(coreText) || fallbackTranslations[coreText]?.[language];
+    if (coreTranslated) {
+      return `${lead}${symLead}${coreTranslated}${symTail}${tail}`;
+    }
+  }
+
   const labels = dynamicLabels[language];
   const serviceCount = text.match(/^(\d+)\s+services?$/i);
-  if (serviceCount) return `${lead}${serviceCount[1]} ${labels.services[serviceCount[1] === "1" ? 0 : 1]}${tail}`;
+  if (serviceCount && labels?.services) return `${lead}${serviceCount[1]} ${labels.services[serviceCount[1] === "1" ? 0 : 1]}${tail}`;
   const lastUpdated = text.match(/^Last updated\s+(.+)$/);
-  if (lastUpdated) return `${lead}${labels.lastUpdated} ${lastUpdated[1]}${tail}`;
+  if (lastUpdated && labels?.lastUpdated) return `${lead}${labels.lastUpdated} ${lastUpdated[1]}${tail}`;
   const lastSaved = text.match(/^Last saved\s+(.+)$/);
-  if (lastSaved) return `${lead}${labels.lastSaved} ${lastSaved[1]}${tail}`;
+  if (lastSaved && labels?.lastSaved) return `${lead}${labels.lastSaved} ${lastSaved[1]}${tail}`;
   const completion = text.match(/^(\d+)% complete$/);
-  if (completion) return `${lead}${completion[1]}% ${labels.complete}${tail}`;
+  if (completion && labels?.complete) return `${lead}${completion[1]}% ${labels.complete}${tail}`;
   const step = text.match(/^Step (\d+) of (\d+)(.*)$/);
-  if (step) return `${lead}${labels.step(step[1], step[2], step[3])}${tail}`;
+  if (step && labels?.step) return `${lead}${labels.step(step[1], step[2], step[3])}${tail}`;
   const minutes = text.match(/^About (\d+) min left$/);
-  if (minutes) return `${lead}${labels.minutesLeft(minutes[1])}${tail}`;
+  if (minutes && labels?.minutesLeft) return `${lead}${labels.minutesLeft(minutes[1])}${tail}`;
 
   if (language === "hi") {
     const patterns: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
