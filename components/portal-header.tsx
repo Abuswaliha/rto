@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "./safe-link";
+import Image from "next/image";
 import {
   Accessibility,
   ArrowRight,
@@ -120,12 +121,19 @@ export function PortalHeader() {
       {/* Main Header Bar */}
       <header className="sticky top-0 z-40 flex h-[78px] w-full items-center justify-between border-b border-[#dce8e5] bg-white/95 px-4 backdrop-blur-md md:px-8 lg:px-12">
         {/* Brand */}
-        <Link href="/" className="flex shrink-0 items-center no-underline" aria-label="Smart RTO home">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#167c74] text-white shadow-sm">
-            <Route size={21} strokeWidth={2.5} />
-          </span>
-          <span className="ml-2 leading-tight">
-            <strong className="block text-base font-extrabold tracking-tight text-[#152321]">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5 no-underline group" aria-label="Smart RTO home">
+          <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-[#167c74] shadow-sm flex items-center justify-center p-0.5">
+            <Image
+              src="/smart-rto-icon.png"
+              alt="Smart RTO logo"
+              width={38}
+              height={38}
+              className="h-full w-full object-contain rounded-[10px]"
+              priority
+            />
+          </div>
+          <span className="leading-tight">
+            <strong className="block text-base font-extrabold tracking-tight text-[#152321] group-hover:text-[#167c74] transition-colors">
               Smart RTO
             </strong>
             <small className="block text-[9px] font-bold uppercase tracking-[.13em] text-[#667572]">

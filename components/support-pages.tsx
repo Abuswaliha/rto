@@ -399,28 +399,34 @@ export function Wallet() {
   }, [demoMode]);
 
   useEffect(() => {
-    if (demoMode || !isAppwriteStorageConfigured) {
-      const timer = window.setTimeout(() => setAppwriteAuthenticated(false), 0);
-      return () => window.clearTimeout(timer);
+    let isMounted = true;
+    if (isAppwriteStorageConfigured) {
+      getCurrentAppwriteUser()
+        .then((user) => {
+          if (isMounted) setAppwriteAuthenticated(!!user || hasSession());
+        })
+        .catch(() => {
+          if (isMounted) setAppwriteAuthenticated(hasSession());
+        });
+    } else {
+      setAppwriteAuthenticated(hasSession());
     }
 
-    getCurrentAppwriteUser()
-      .then(() => setAppwriteAuthenticated(true))
-      .catch(() => setAppwriteAuthenticated(false));
-  }, [demoMode]);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
-    if (demoMode || !isAppwriteStorageConfigured || !appwriteAuthenticated) {
-      const timer = window.setTimeout(() => setUploadedWalletFiles([]), 0);
-      return () => window.clearTimeout(timer);
+    if (demoMode) return;
+    if (isAppwriteStorageConfigured) {
+      Promise.all([listWalletFiles(), listWalletDocuments().catch(() => [])])
+        .then(([files, records]) => setUploadedWalletFiles(files.map((file) => ({
+          ...file,
+          category: records.find((record) => record.number === file.$id)?.type || categoryFromFileName(file.name),
+        }))))
+        .catch(() => {});
     }
-
-    Promise.all([listWalletFiles(), listWalletDocuments().catch(() => [])])
-      .then(([files, records]) => setUploadedWalletFiles(files.map((file) => ({
-        ...file,
-        category: records.find((record) => record.number === file.$id)?.type || categoryFromFileName(file.name),
-      }))))
-      .catch(() => setStandardWalletNotice("Sign in with Google to view documents saved in your private Appwrite wallet."));
   }, [demoMode, appwriteAuthenticated]);
 
   function selectWalletFile(file: File | null) {
@@ -838,7 +844,15 @@ export function Wallet() {
             <div className="mt-6 text-left">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-[#587269]">Your uploaded documents</h4>
-                <span className="text-[11px] font-medium text-[#687d75]">Stored in your account</span>
+                {appwriteAuthenticated ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <ShieldCheck size={12} /> Stored in authenticated account
+                  </span>
+                ) : (
+                  <Link href="/login?next=/wallet" className="text-[11px] font-bold text-[#167c74] hover:underline flex items-center gap-1">
+                    Sign in with Google →
+                  </Link>
+                )}
               </div>
               <div className="overflow-hidden rounded-xl border border-[#d8e5e0] bg-white">
                 {uploadedWalletFiles.map((file, index) => (
