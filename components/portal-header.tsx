@@ -119,10 +119,10 @@ export function PortalHeader() {
       </div>
 
       {/* Main Header Bar */}
-      <header className="sticky top-0 z-40 flex h-[78px] w-full items-center justify-between border-b border-[#dce8e5] bg-white/95 px-4 backdrop-blur-md md:px-8 lg:px-12">
-        {/* Brand */}
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 no-underline group" aria-label="Smart RTO home">
-          <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-[#167c74] shadow-sm flex items-center justify-center p-0.5">
+      <header className="sticky top-0 z-40 flex h-16 sm:h-[78px] w-full items-center justify-between border-b border-[#dce8e5] bg-white/95 px-3 xs:px-4 backdrop-blur-md md:px-8 lg:px-12">
+        {/* Adaptive Brand Logo */}
+        <Link href="/" className="flex shrink-0 items-center gap-2 xs:gap-2.5 no-underline group" aria-label="Smart RTO home">
+          <div className="relative h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10 overflow-hidden rounded-xl bg-[#167c74] shadow-sm flex items-center justify-center p-0.5 transition-transform group-hover:scale-105">
             <Image
               src="/smart-rto-icon.png"
               alt="Smart RTO logo"
@@ -133,10 +133,10 @@ export function PortalHeader() {
             />
           </div>
           <span className="leading-tight">
-            <strong className="block text-base font-extrabold tracking-tight text-[#152321] group-hover:text-[#167c74] transition-colors">
+            <strong className="block text-sm xs:text-[15px] sm:text-base font-extrabold tracking-tight text-[#152321] group-hover:text-[#167c74] transition-colors whitespace-nowrap">
               Smart RTO
             </strong>
-            <small className="block text-[9px] font-bold uppercase tracking-[.13em] text-[#667572]">
+            <small className="hidden xs:block text-[8px] sm:text-[9px] font-bold uppercase tracking-[.13em] text-[#667572]">
               Services simplified
             </small>
           </span>
