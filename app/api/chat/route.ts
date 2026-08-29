@@ -2,12 +2,25 @@ import { NextResponse } from "next/server";
 
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  hi: "हिन्दी (Hindi)",
+  bn: "বাংলা (Bengali)",
+  mr: "मराठी (Marathi)",
+  te: "తెలుగు (Telugu)",
+  ta: "தமிழ் (Tamil)",
+  gu: "ગુજરાતી (Gujarati)",
+  ur: "اردو (Urdu)",
+  kn: "ಕನ್ನಡ (Kannada)",
+  or: "ଓଡ଼ିଆ (Odia)",
+  ml: "മലയാളം (Malayalam)",
+};
+
 const SYSTEM_PROMPT = `You are the official Smart RTO AI Assistant (स्मार्ट RTO सहायक) for the Smart RTO Citizen Portal.
 
 ### CRITICAL DOMAIN POLICY & GUARDRAILS (STRICT):
 1. **RTO & TRANSPORT ONLY**: You are ONLY permitted to answer questions about Indian RTO services, Driving Licences (Learner Form 2, Permanent Form 4), Vehicle RC Transfer (Form 29/30), RC search, Document Wallet, RTO Appointments, eChallans, and Portal Navigation.
-2. **STRICTLY REFUSE OFF-TOPIC QUESTIONS**: If the user asks about ANYTHING unrelated to RTO / transport / vehicles / licences (such as celebrities, Elon Musk, politicians, movies, general history, geography, coding, science, sports, weather, etc.), you MUST politely refuse:
-   "I am specialized exclusively in Smart RTO and transport citizen services. Please ask questions regarding driving licences, vehicle RC transfers, document requirements, or appointment bookings."
+2. **STRICTLY REFUSE OFF-TOPIC QUESTIONS**: If the user asks about ANYTHING unrelated to RTO / transport / vehicles / licences (such as celebrities, Elon Musk, politicians, movies, general history, geography, coding, science, sports, weather, etc.), you MUST politely refuse in the active selected language.
    Never provide biographies, facts, or answers about general knowledge or famous personalities.
 
 ### Quick Reference & Rules:
@@ -41,12 +54,11 @@ const SYSTEM_PROMPT = `You are the official Smart RTO AI Assistant (स्मा
 
 ### Response Style:
 - **Keep it SHORT**: Maximum 2 to 4 bullet points (under 50–70 words).
-- **Bold key terms** like **Form 2**, **Aadhaar**, **Age 18+**, etc.
-- If asked in Hindi or other Indian languages, answer in that language with short bullets.`;
+- **Bold key terms** like **Form 2**, **Aadhaar**, **Age 18+**, etc.`;
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, language = "en" } = await req.json();
 
     const apiKey =
       process.env.MISTRAL_API_KEY ||
@@ -60,14 +72,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const activeLanguageName = LANGUAGE_NAMES[language] || "English";
+    const languageInstruction = `\n\n### MANDATORY ACTIVE LANGUAGE:\nThe citizen has selected ${activeLanguageName} in the portal navigation bar.\nYou MUST respond completely and naturally in ${activeLanguageName}. Do not respond in English unless the selected language is English. Keep portal link URLs untouched (e.g. /apply/learner-licence, /wallet, /track, /appointments, /vehicles/transfer).`;
+
+    const combinedSystemPrompt = SYSTEM_PROMPT + languageInstruction;
+
     const payload = {
       model: "mistral-small-latest",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: combinedSystemPrompt },
         ...(messages || []),
       ],
       temperature: 0.1,
-      max_tokens: 250,
+      max_tokens: 300,
     };
 
     const response = await fetch(MISTRAL_API_URL, {
@@ -90,7 +107,7 @@ export async function POST(req: Request) {
     const data = await response.json();
     const replyText =
       data.choices?.[0]?.message?.content ||
-      "I am specialized exclusively in Smart RTO and transport services. How can I help with licences, RC, or documents?";
+      "I am specialized exclusively in Smart RTO and transport services.";
 
     return NextResponse.json({ reply: replyText });
   } catch (error: any) {

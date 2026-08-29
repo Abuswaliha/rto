@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "./safe-link";
 import {
   X,
@@ -33,6 +33,7 @@ import {
   Marker,
 } from "@/components/ui/chat";
 import { Separator } from "@/components/ui/separator";
+import { useLanguage, type LanguageCode } from "./language-provider";
 
 interface ChatAction {
   label: string;
@@ -54,149 +55,142 @@ interface QuickPrompt {
   query: string;
 }
 
-const QUICK_PROMPTS: QuickPrompt[] = [
-  { label: "📄 Learner Licence Docs", query: "What documents are required for Learner Licence?" },
-  { label: "🪪 Permanent DL Steps", query: "How to apply for Permanent Driving Licence?" },
-  { label: "🚗 Vehicle RC Transfer", query: "How to transfer vehicle ownership Form 29 30?" },
-  { label: "📁 Upload Documents", query: "Where do I upload documents in wallet?" },
-  { label: "🔍 Track Application", query: "How do I check my application status?" },
-  { label: "⏱️ Book RTO Slot", query: "How to book an appointment slot?" },
-  { label: "💳 Pay eChallan", query: "How to pay traffic challan?" },
-];
+const I18N_GREETINGS: Record<LanguageCode, string> = {
+  en: "Namaste! I am your **Smart RTO Assistant**.\nAsk me anything about licences, vehicle transfers, documents, or navigation.",
+  hi: "नमस्ते! मैं आपका **स्मार्ट RTO सहायक** हूँ।\nड्राइविंग लाइसेंस, वाहन ट्रांसफर, दस्तावेज़ों या पोर्टल नेविगेशन के बारे में कुछ भी पूछें।",
+  bn: "নমস্কার! আমি আপনার **স্মার্ট আরটিও সহকারী**।\nলাইসেন্স, গাড়ির মালিকানা বদল, বা প্রয়োজনীয় নথিপত্র সম্পর্কে যেকোনো প্রশ্ন জিজ্ঞাসা করুন।",
+  mr: "नमस्कार! मी आपला **स्मार्ट RTO सहाय्यक** आहे.\nड्रायव्हिंग लायसन्स, वाहन ट्रान्सफर, कागदपत्रे किंवा पोर्टल नेव्हिगेशनबद्दल मला विचारा.",
+  te: "నమస్కారం! నేను మీ **స్మార్ట్ RTO అసిస్టెంట్**.\nడ్రైవింగ్ లైసెన్స్, వాహన బదిలీ, పత్రాలు లేదా సేవల గురించి నన్ను అడగండి.",
+  ta: "வணக்கம்! நான் உங்கள் **ஸ்மார்ட் RTO உதவியாளர்**.\nஓட்டுநர் உரிமம், வாகன பெயர் மாற்றம், ஆவணங்கள் அல்லது சேவைகள் பற்றி என்னிடம் கேளுங்கள்.",
+  gu: "નમસ્તે! હું તમારો **સ્માર્ટ RTO સહાયક** છું.\nડ્રાઇવિંગ લાયસન્સ, વાહન ટ્રાન્સફર, દસ્તાવેજો અથવા સેવાઓ વિશે કોઈપણ પ્રશ્ન પૂછો.",
+  ur: "نمستے! میں آپ کا **اسمارٹ آر ٹی او اسسٹنٹ** ہوں۔\nڈرائیونگ لائسنس، گاڑی کی منتقلی، دستاویزات، یا خدمات کے بارے میں بلا جھجھک پوچھیں۔",
+  kn: "ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ **ಸ್ಮಾರ್ಟ್ RTO ಸಹಾಯಕ**.\nಡ್ರೈವಿಂಗ್ ಲೈಸೆನ್ಸ್, ವಾಹನ ವರ್ಗಾವಣೆ, ದಾಖಲೆಗಳು ಅಥವಾ ಸೇವೆಗಳ ಬಗ್ಗೆ ನನ್ನನ್ನು ಕೇಳಿ.",
+  or: "ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କର **ସ୍ମାର୍ଟ RTO ସହାୟକ**।\nଡ୍ରାଇଭିଂ ଲାଇସେନ୍ସ, ଗାଡ଼ି ଟ୍ରାନ୍ସଫର, ଦସ୍ତାବିଜ୍ ବାବଦରେ ଯାହା ପଚାରିବାକୁ ଚାହାଁନ୍ତି ପଚାରନ୍ତୁ।",
+  ml: "നമസ്കാരം! ഞാൻ നിങ്ങളുടെ **സ്മാർട്ട് ആർ‌ടി‌ഒ അസിസ്റ്റന്റ്** ആണ്.\nഡ്രൈവിംഗ് ലൈസൻസ്, വാഹന കൈമാറ്റം, രേഖകൾ അല്ലെങ്കിൽ സേവനങ്ങളെക്കുറിച്ച് എന്നോട് ചോദിക്കാം.",
+};
+
+const I18N_PROMPTS: Record<LanguageCode, QuickPrompt[]> = {
+  en: [
+    { label: "📄 Learner Licence Docs", query: "What documents are required for Learner Licence?" },
+    { label: "🪪 Permanent DL Steps", query: "How to apply for Permanent Driving Licence?" },
+    { label: "🚗 Vehicle RC Transfer", query: "How to transfer vehicle ownership Form 29 30?" },
+    { label: "📁 Upload Documents", query: "Where do I upload documents in wallet?" },
+    { label: "🔍 Track Application", query: "How do I check my application status?" },
+    { label: "⏱️ Book RTO Slot", query: "How to book an appointment slot?" },
+    { label: "💳 Pay eChallan", query: "How to pay traffic challan?" },
+  ],
+  hi: [
+    { label: "📄 लर्नर लाइसेंस दस्तावेज़", query: "लर्नर लाइसेंस (Form 2) के लिए क्या दस्तावेज़ चाहिए?" },
+    { label: "🪪 पक्का DL कैसे बनवाएं", query: "परमानेंट ड्राइविंग लाइसेंस (Form 4) कैसे आवेदन करें?" },
+    { label: "🚗 वाहन नाम ट्रांसफर", query: "वाहन ट्रांसफर फॉर्म 29 और 30 प्रक्रिया क्या है?" },
+    { label: "📁 दस्तावेज़ वॉलेट", query: "वॉलेट में दस्तावेज़ कैसे अपलोड करें?" },
+    { label: "🔍 आवेदन ट्रैक करें", query: "आवेदन की स्थिति कैसे चेक करें?" },
+    { label: "⏱️ RTO स्लॉट बुक करें", query: "RTO अपॉइंटमेंट स्लॉट कैसे बुक करें?" },
+  ],
+  bn: [
+    { label: "📄 লার্নার লাইসেন্স নথি", query: "লার্নার লাইসেন্স পেতে কি কি নথি লাগবে?" },
+    { label: "🪪 ড্রাইভিং লাইসেন্স আবেদন", query: "স্থায়ী ড্রাইভিং লাইসেন্স কীভাবে করব?" },
+    { label: "🚗 গাড়ি ট্রান্সফার", query: "গাড়ির মালিকানা বদল ফর্ম ২৯ ও ৩০ কীভাবে করবেন?" },
+    { label: "🔍 আবেদন ট্র্যাক", query: "আবেদনের স্ট্যাটাস কীভাবে দেখব?" },
+  ],
+  mr: [
+    { label: "📄 लर्निंग लायसन्स कागदपत्रे", query: "लर्निंग लायसन्ससाठी कोणती कागदपत्रे लागतात?" },
+    { label: "🪪 पक्के ड्रायव्हिंग लायसन्स", query: "पक्के ड्रायव्हिंग लायसन्स कसे काढावे?" },
+    { label: "🚗 वाहन मालकी ट्रान्सफर", query: "गाडी मालकी हस्तांतरण फॉर्म २९ आणि ३० कसे करावे?" },
+    { label: "🔍 अर्ज ट्रॅक करा", query: "माझ्या अर्जाची स्थिती कशी तपासावी?" },
+  ],
+  te: [
+    { label: "📄 లెర్నర్ లైసెన్స్ పత్రాలు", query: "లెర్నర్ లైసెన్స్‌కు ఏ పత్రాలు అవసరం?" },
+    { label: "🪪 పర్మనెంట్ DL ప్రక్రియ", query: "శాశ్వత డ్రైవింగ్ లైసెన్స్ కోసం ఎలా దరఖాస్తు చేయాలి?" },
+    { label: "🚗 వాహన బదిలీ ఫారం 29 & 30", query: "వాహన యాజమాన్య బదిలీ ఎలా చేయాలి?" },
+    { label: "🔍 అప్లికేషన్ ట్రాక్", query: "నా దరఖాస్తు స్థితిని ఎలా తనిఖీ చేయాలి?" },
+  ],
+  ta: [
+    { label: "📄 பழகுநர் உரிம ஆவணங்கள்", query: "பழகுநர் உரிமத்திற்கு தேவையான ஆவணங்கள் என்ன?" },
+    { label: "🪪 ஓட்டுநர் உரிமம் பெற", query: "நிரந்தர ஓட்டுநர் உரிமம் பெறுவது எப்படி?" },
+    { label: "🚗 வாகன பெயர் மாற்றம்", query: "வாகன பெயர் மாற்றம் படிவம் 29 & 30 செய்வது எப்படி?" },
+    { label: "🔍 நிலை அறிய", query: "விண்ணப்ப நிலையை எவ்வாறு அறிவது?" },
+  ],
+  gu: [
+    { label: "📄 લર્નર લાયસન્સ દસ્તાવેજ", query: "લર્નર લાયસન્સ માટે કયા દસ્તાવેજો જોઈએ?" },
+    { label: "🪪 પાકું ડ્રાઇવિંગ લાયસન્સ", query: "પાકું લાયસન્સ કેવી રીતે મેળવવું?" },
+    { label: "🚗 વાહન ટ્રાન્સફર", query: "વાહન માલિકી ટ્રાન્સફર કેવી રીતે કરવું?" },
+    { label: "🔍 અરજી ટ્રેક કરો", query: "અરજીનું સ્ટેટસ કેવી રીતે ચેક કરવું?" },
+  ],
+  ur: [
+    { label: "📄 لرنر لائسنس کے کاغذات", query: "لرنر لائسنس کے لیے کون سی دستاویزات درکار ہیں؟" },
+    { label: "🪪 پرماننٹ ڈرائیونگ لائسنس", query: "مستقل ڈرائیونگ لائسنس کے لیے کیسے درخواست دیں؟" },
+    { label: "🚗 گاڑی ٹرانسفر", query: "گاڑی کی منتقلی فارم 29 اور 30 کیسے کریں؟" },
+  ],
+  kn: [
+    { label: "📄 ಲರ್ನರ್ ಲೈಸೆನ್ಸ್ ದಾಖಲೆಗಳು", query: "ಲರ್ನರ್ ಲೈಸೆನ್ಸ್‌ಗೆ ಯಾವ ದಾಖಲೆಗಳು ಬೇಕು?" },
+    { label: "🪪 ಪರ್ಮನೆಂಟ್ DL ಅರ್ಜಿ", query: "ಶಾಶ್ವತ ಡ್ರೈವಿಂಗ್ ಲೈಸೆನ್ಸ್ ಹೇಗೆ ಪಡೆಯುವುದು?" },
+    { label: "🚗 ವಾಹನ ವರ್ಗಾವಣೆ", query: "ವಾಹನ ಮಾಲೀಕತ್ವ ವರ್ಗಾವಣೆ ಹೇಗೆ ಮಾಡುವುದು?" },
+  ],
+  or: [
+    { label: "📄 ଲର୍ନର୍ ଲାଇସେନ୍ସ ଦସ୍ତାବିଜ୍", query: "ଲର୍ନର ଲାଇସେନ୍ସ ପାଇଁ କଣ ଦସ୍ତାବିଜ୍ ଆବଶ୍ୟକ?" },
+    { label: "🪪 ସ୍ଥାୟୀ DL ଆବେଦନ", query: "ସ୍ଥାୟୀ ଡ୍ରାଇଭିଂ ଲାଇସେନ୍ସ କିପରି କରିବେ?" },
+    { label: "🚗 ଗାଡ଼ି ଟ୍ରାନ୍ସଫର", query: "ଗାଡି ମାଲିକାନା ଟ୍ରାନ୍ସଫର କିପରି କରିବେ?" },
+  ],
+  ml: [
+    { label: "📄 ലേണേഴ്‌സ് ലൈസൻസ് രേഖകൾ", query: "ലേണേഴ്‌സ് ലൈസൻസിന് ആവശ്യമായ രേഖകൾ എന്തൊക്കെയാണ്?" },
+    { label: "🪪 ഡ്രൈവിംഗ് ലൈസൻസ് എടുക്കാൻ", query: "സ്ഥിര ഡ്രൈവിംഗ് ലൈസൻസ് എങ്ങനെ അപേക്ഷിക്കാം?" },
+    { label: "🚗 വാഹന ഉടമസ്ഥാവകാശ മാറ്റം", query: "വാഹന ഉടമസ്ഥാവകാശം മാറ്റുന്നത് എങ്ങനെ?" },
+  ],
+};
 
 function extractContextualActions(text: string): ChatAction[] {
   const lower = text.toLowerCase();
   const actions: ChatAction[] = [];
 
-  if (lower.includes("learner") || lower.includes("form 2") || lower.includes("/apply/learner-licence")) {
+  if (lower.includes("learner") || lower.includes("form 2") || lower.includes("/apply/learner-licence") || lower.includes("लर्नर")) {
     actions.push({ label: "Apply Learner Licence", href: "/apply/learner-licence", icon: FileText });
   }
-  if (lower.includes("permanent") || lower.includes("form 4") || lower.includes("/apply/permanent-licence")) {
+  if (lower.includes("permanent") || lower.includes("form 4") || lower.includes("/apply/permanent-licence") || lower.includes("पक्का") || lower.includes("स्थायी")) {
     actions.push({ label: "Apply Permanent DL", href: "/apply/permanent-licence", icon: IdCard });
   }
-  if (lower.includes("transfer") || lower.includes("form 29") || lower.includes("form 30") || lower.includes("/vehicles/transfer")) {
+  if (lower.includes("transfer") || lower.includes("form 29") || lower.includes("form 30") || lower.includes("/vehicles/transfer") || lower.includes("ट्रांसफर")) {
     actions.push({ label: "Vehicle Transfer", href: "/vehicles/transfer", icon: Car });
   }
   if (lower.includes("search") || lower.includes("rc search") || lower.includes("/vehicles/search")) {
     actions.push({ label: "Search RC", href: "/vehicles/search", icon: Search });
   }
-  if (lower.includes("wallet") || lower.includes("document") || lower.includes("upload") || lower.includes("/wallet")) {
+  if (lower.includes("wallet") || lower.includes("document") || lower.includes("upload") || lower.includes("/wallet") || lower.includes("वॉलेट")) {
     actions.push({ label: "Open Wallet", href: "/wallet", icon: WalletCards });
   }
-  if (lower.includes("track") || lower.includes("status") || lower.includes("srto-") || lower.includes("/track")) {
+  if (lower.includes("track") || lower.includes("status") || lower.includes("srto-") || lower.includes("/track") || lower.includes("ट्रैक")) {
     actions.push({ label: "Track Status", href: "/track", icon: Search });
   }
-  if (lower.includes("appointment") || lower.includes("slot") || lower.includes("visit") || lower.includes("/appointments")) {
+  if (lower.includes("appointment") || lower.includes("slot") || lower.includes("visit") || lower.includes("/appointments") || lower.includes("अपॉइंटमेंट")) {
     actions.push({ label: "Book Slot", href: "/appointments", icon: CalendarDays });
   }
-  if (lower.includes("challan") || lower.includes("fine") || lower.includes("/challans")) {
+  if (lower.includes("challan") || lower.includes("fine") || lower.includes("/challans") || lower.includes("चालान")) {
     actions.push({ label: "Pay Challan", href: "/challans", icon: WalletCards });
   }
 
   return actions.slice(0, 2);
 }
 
-function getShortFallbackReply(rawQuery: string): { text: string; actions?: ChatAction[]; tags?: string[] } {
-  const query = rawQuery.toLowerCase().trim();
-
-  if (query.includes("learner") || query.includes("learning") || query.includes("ll") || (query.includes("form 2") && !query.includes("form 29"))) {
-    return {
-      text: `**Learner Licence (Form 2):**\n• **Age:** 16 (gearless <50cc), 18 (cars/bikes), 20 (commercial).\n• **Docs:** Photo, Aadhaar (Age & Address proof), Form 1 self-declaration.\n• **Test:** 15 questions (9 to pass). Valid for 6 months across India.`,
-      actions: [
-        { label: "Apply Learner Licence", href: "/apply/learner-licence", icon: FileText },
-        { label: "Open Document Wallet", href: "/wallet", icon: WalletCards },
-      ],
-      tags: ["Form 2", "Age 18+", "15 Qs Test"],
-    };
-  }
-
-  if (query.includes("permanent") || query.includes("driving licence") || query.includes("driving license") || query.includes("dl") || query.includes("form 4")) {
-    return {
-      text: `**Permanent DL (Form 4):**\n• **Prerequisite:** Active Learner Licence held for 30–180 days.\n• **Docs:** Learner Licence, photo, Form 5 certificate (if trained).\n• **Test:** Mandatory on-track driving skill test at RTO.`,
-      actions: [
-        { label: "Apply Permanent DL", href: "/apply/permanent-licence", icon: IdCard },
-      ],
-      tags: ["Form 4", "30 Days after LL", "Track Test"],
-    };
-  }
-
-  if (query.includes("transfer") || query.includes("vehicle transfer") || query.includes("ownership") || query.includes("form 29") || query.includes("form 30")) {
-    return {
-      text: `**Vehicle RC Transfer (Form 29 & 30):**\n• **Forms:** Form 29 (Seller notice) + Form 30 (Buyer application).\n• **Docs:** Original RC, valid Insurance, PUCC, NOC Form 28 (if other RTO).`,
-      actions: [
-        { label: "Start Vehicle Transfer", href: "/vehicles/transfer", icon: Car },
-        { label: "Search Vehicle RC", href: "/vehicles/search", icon: Search },
-      ],
-      tags: ["Form 29 & 30", "RC Booklet", "Insurance"],
-    };
-  }
-
-  if (query.includes("document") || query.includes("docs") || query.includes("wallet") || query.includes("upload")) {
-    return {
-      text: `**Document Requirements & Wallet:**\n• **Accepted IDs:** Aadhaar, Passport, Voter ID, Utility bill.\n• **Digital Wallet:** Store, view, and upload verified credentials (up to 10 MB).`,
-      actions: [
-        { label: "Open Document Wallet", href: "/wallet", icon: WalletCards },
-      ],
-      tags: ["Aadhaar", "Photo", "Digital Locker"],
-    };
-  }
-
-  if (query.includes("track") || query.includes("status") || query.includes("srto-")) {
-    return {
-      text: `**Application Tracking:**\n• Enter your reference number (\`SRTO-LL-2026-XXXXXX\` or \`SRTO-RC-2026-XXXXXX\`) to check real-time progress and download approval PDFs.`,
-      actions: [
-        { label: "Track Application", href: "/track", icon: Search },
-      ],
-      tags: ["SRTO Reference", "Real-Time"],
-    };
-  }
-
-  // Off-topic or non-RTO questions
-  const isOffTopic =
-    query.includes("who is") ||
-    query.includes("elon") ||
-    query.includes("musk") ||
-    query.includes("weather") ||
-    query.includes("movie") ||
-    query.includes("song") ||
-    query.includes("capital of") ||
-    query.includes("president") ||
-    query.includes("sports") ||
-    query.includes("cricket");
-
-  if (isOffTopic) {
-    return {
-      text: `I am specialized exclusively in **Smart RTO & Transport Services**.\n• Please ask questions about Driving Licences, Vehicle Transfers, Documents, or Slot Booking.`,
-      actions: [
-        { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
-        { label: "Vehicle Transfer", href: "/vehicles/transfer", icon: Car },
-        { label: "Document Wallet", href: "/wallet", icon: WalletCards },
-      ],
-      tags: ["RTO Only"],
-    };
-  }
-
-  return {
-    text: `**Smart RTO Assistant:**\n• **Licences:** Form 2 (Learner) & Form 4 (Permanent DL).\n• **Vehicles:** Form 29/30 (Transfer) & RC Search.\n• **Tools:** Document Wallet & Live Application Tracking.`,
-    actions: [
-      { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
-      { label: "Document Wallet", href: "/wallet", icon: WalletCards },
-      { label: "Track Status", href: "/track", icon: Search },
-    ],
-    tags: ["Services", "Short Guide"],
-  };
-}
-
 export function RtoChatBot() {
+  const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputQuery, setInputQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+
+  const initialGreeting = useMemo(() => {
+    return I18N_GREETINGS[language] || I18N_GREETINGS.en;
+  }, [language]);
+
+  const quickPrompts = useMemo(() => {
+    return I18N_PROMPTS[language] || I18N_PROMPTS.en;
+  }, [language]);
+
   const [messages, setMessages] = useState<MessageItem[]>([
     {
       id: "msg-init",
       sender: "bot",
-      text: "Namaste! I am your **Smart RTO Assistant**.\nAsk me anything about licences, vehicle transfers, documents, or navigation.",
+      text: initialGreeting,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       actions: [
         { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
@@ -206,6 +200,29 @@ export function RtoChatBot() {
       tags: ["Mistral AI", "Quick Guide"],
     },
   ]);
+
+  // Update initial message if empty or user switches language
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === "msg-init") {
+        return [
+          {
+            id: "msg-init",
+            sender: "bot",
+            text: initialGreeting,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            actions: [
+              { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
+              { label: "Vehicle Transfer", href: "/vehicles/transfer", icon: Car },
+              { label: "Document Wallet", href: "/wallet", icon: WalletCards },
+            ],
+            tags: ["Mistral AI", "Quick Guide"],
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [initialGreeting]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -243,7 +260,7 @@ export function RtoChatBot() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: historyPayload }),
+        body: JSON.stringify({ messages: historyPayload, language }),
       });
 
       if (res.ok) {
@@ -265,14 +282,16 @@ export function RtoChatBot() {
         throw new Error("Mistral API error");
       }
     } catch {
-      const localReply = getShortFallbackReply(text);
       const botMessage: MessageItem = {
         id: `msg-${Date.now()}-bot`,
         sender: "bot",
-        text: localReply.text,
+        text: initialGreeting,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        actions: localReply.actions,
-        tags: localReply.tags,
+        actions: [
+          { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
+          { label: "Document Wallet", href: "/wallet", icon: WalletCards },
+        ],
+        tags: ["Local Guide"],
       };
       setMessages((prev) => [...prev, botMessage]);
     } finally {
@@ -285,7 +304,7 @@ export function RtoChatBot() {
       {
         id: `msg-${Date.now()}-reset`,
         sender: "bot",
-        text: "Conversation cleared. How can I help you today?",
+        text: initialGreeting,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         actions: [
           { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
@@ -496,7 +515,7 @@ export function RtoChatBot() {
                   </span>
                 </div>
                 <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                  {QUICK_PROMPTS.map((prompt, idx) => (
+                  {quickPrompts.map((prompt, idx) => (
                     <Button
                       key={idx}
                       type="button"
