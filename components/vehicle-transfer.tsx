@@ -38,6 +38,7 @@ import {
   isAppwriteConfigured,
   saveApplicationRecord,
 } from "@/lib/appwrite";
+import { VehicleSearch } from "@/components/vehicle-search";
 import { downloadVehicleTransferPdf } from "@/lib/demo-pdf";
 import { DemoApplication, newApplicationId, newPaymentReference, saveApplication } from "@/lib/storage";
 
@@ -82,8 +83,8 @@ const SEEDED_VEHICLES: Record<
   },
 };
 
-export function VehicleTransferService() {
-  const [activeTab, setActiveTab] = useState<"transfer" | "search">("transfer");
+export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "transfer" | "search" }) {
+  const [viewMode, setViewMode] = useState<"all" | "transfer" | "search">(mode);
   const [step, setStep] = useState<number>(0);
 
   // Search / Verify State
@@ -112,24 +113,26 @@ export function VehicleTransferService() {
     if (!key) return;
 
     setVehicleLoading(true);
-    let found = SEEDED_VEHICLES[key];
+    let found = null;
+    let isAppwriteRecord = false;
 
-    if (!found && isAppwriteConfigured) {
+    if (isAppwriteConfigured) {
       try {
         const remote = await getVehicleByRegNumber(key);
         if (remote) {
           found = {
-            regNumber: remote.regNumber,
-            ownerName: remote.ownerName,
-            makerModel: remote.makerModel,
-            vehicleClass: remote.vehicleClass,
-            fuelType: remote.fuelType,
-            rtoOffice: remote.rtoOffice,
+            regNumber: remote.regNumber || key,
+            ownerName: remote.ownerName || "Appwrite Verified Owner",
+            makerModel: remote.makerModel || "Appwrite Registered Vehicle",
+            vehicleClass: remote.vehicleClass || "Light Motor Vehicle (LMV)",
+            fuelType: remote.fuelType || "Petrol",
+            rtoOffice: remote.rtoOffice || "MH-10 Sangli RTO",
             regDate: remote.regDate || "2024-01-01",
             fitnessValidUntil: remote.fitnessValidUntil || "2039-01-01",
             insuranceValidUntil: remote.insuranceValidUntil || "2027-01-01",
-            status: remote.status || "Active",
+            status: remote.status || "Active · Verified Title",
           };
+          isAppwriteRecord = true;
         }
       } catch (err) {
         console.warn("Appwrite vehicle lookup fallback:", err);
@@ -137,8 +140,7 @@ export function VehicleTransferService() {
     }
 
     if (!found) {
-      // Dynamic fallback based on input
-      found = {
+      found = SEEDED_VEHICLES[key] || {
         regNumber: key,
         ownerName: "Demo Vehicle Owner",
         makerModel: "Honda City 1.5 i-VTEC",
@@ -272,29 +274,30 @@ export function VehicleTransferService() {
             Apply online for vehicle ownership transfer, NOC endorsement, and instant RC record inspection.
           </p>
 
-          <div className="mt-6 flex gap-2">
-            <Button
-              variant={activeTab === "transfer" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveTab("transfer")}
-            >
-              Transfer Ownership (Form 29/30)
-            </Button>
-            <Button
-              variant={activeTab === "search" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveTab("search")}
-            >
-              RC Record Search
-            </Button>
-          </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        {activeTab === "transfer" ? (
-          <div>
+      <main className="mx-auto max-w-5xl px-6 py-10 space-y-12">
+        {/* RC Record Search Section (Loaded on same page) */}
+        {(viewMode === "all" || viewMode === "search") && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-lg font-bold text-[#152321]">1. Official Vehicle RC Record Search</h2>
+              <Badge variant="outline">Live Verification</Badge>
+            </div>
+            <VehicleSearch />
+          </section>
+        )}
+
+        {/* Ownership Transfer Section (Loaded on same page) */}
+        {(viewMode === "all" || viewMode === "transfer") && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-lg font-bold text-[#152321]">2. Vehicle Ownership Transfer Application (Form 29 & 30)</h2>
+              <Badge variant="secondary">Resumable Form</Badge>
+            </div>
+            <div>
             {!submittedData ? (
               <div className="space-y-8">
                 {/* 3 Step Indicator */}
@@ -629,69 +632,8 @@ export function VehicleTransferService() {
                 </div>
               </Card>
             )}
-          </div>
-        ) : (
-          /* RC Record Search Tab */
-          <Card className="p-6 space-y-6">
-            <CardHeader className="p-0">
-              <CardTitle>Official Vehicle RC Lookup</CardTitle>
-              <CardDescription>
-                Search any vehicle registration plate to view fitness, insurance, and road tax validity.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={regInput}
-                  onChange={(e) => setRegInput(e.target.value.toUpperCase())}
-                  placeholder="MH10EA1234"
-                  className="font-mono font-bold tracking-wider uppercase"
-                />
-                <Button onClick={handleVehicleSearch} disabled={vehicleLoading} className="gap-1.5">
-                  {vehicleLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />} Search
-                </Button>
-              </div>
-
-              {vehicle && (
-                <div className="rounded-xl border border-[#cfe3dd] bg-[#f8fbf9] p-5 text-xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#cfe3dd] pb-3">
-                    <div>
-                      <h3 className="text-base font-bold text-[#152321]">{vehicle.makerModel}</h3>
-                      <p className="font-mono text-xs text-[#167c74] font-bold">{vehicle.regNumber}</p>
-                    </div>
-                    <Badge variant="success">Verified Digital RC</Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    <div>
-                      <span className="text-[#5e6f68]">Registered Owner</span>
-                      <strong className="block text-[#152321]">{vehicle.ownerName}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[#5e6f68]">RTO Office</span>
-                      <strong className="block text-[#152321]">{vehicle.rtoOffice}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[#5e6f68]">Fuel Type</span>
-                      <strong className="block text-[#152321]">{vehicle.fuelType}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[#5e6f68]">Fitness Expiry</span>
-                      <strong className="block text-[#152321]">{vehicle.fitnessValidUntil}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[#5e6f68]">Insurance Expiry</span>
-                      <strong className="block text-[#0d5c45]">{vehicle.insuranceValidUntil}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[#5e6f68]">Status</span>
-                      <strong className="block text-[#0d5c45]">{vehicle.status}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         )}
       </main>
     </PageShell>

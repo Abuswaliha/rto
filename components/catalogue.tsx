@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useState } from "react";
+import { useDemoMode } from "./demo-mode-provider";
 import { PageShell } from "./page-shell";
 import {
   Card,
@@ -35,7 +36,7 @@ const catalog = [
     items: [
       {
         t: "Learner Licence",
-        d: "Complete a guided, resumable demo application.",
+        d: "Complete a guided, resumable application.",
         h: "/apply/learner-licence",
         live: true,
         icon: FileText,
@@ -51,19 +52,19 @@ const catalog = [
   },
   {
     cat: "Vehicle & records",
-    description: "Check demo vehicle information and registration guidance.",
+    description: "Check vehicle information and registration guidance.",
     items: [
       {
         t: "Check a vehicle",
-        d: "Search one seeded synthetic registration.",
-        h: "/vehicles",
+        d: "Search a sample registration.",
+        h: "/vehicles/search",
         live: true,
         icon: Car,
       },
       {
         t: "Vehicle Transfer Service",
         d: "Apply for online ownership transfer and RC endorsement.",
-        h: "/vehicles",
+        h: "/vehicles/transfer",
         live: true,
         icon: Car,
       },
@@ -75,14 +76,14 @@ const catalog = [
     items: [
       {
         t: "eChallan",
-        d: "Check and pay a fictional demonstration challan.",
+        d: "Check and pay a challan.",
         h: "/challans",
         live: true,
         icon: WalletCards,
       },
       {
         t: "Grievance",
-        d: "Raise a mock service issue in three simple steps.",
+        d: "Raise a service issue in three simple steps.",
         h: "/grievance",
         live: true,
         icon: Gavel,
@@ -92,15 +93,30 @@ const catalog = [
 ];
 
 export function Services() {
+  const { enabled: demoMode } = useDemoMode();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredCatalog = catalog
+    .map((group) => {
+      const filteredItems = group.items.filter(
+        (item) =>
+          item.t.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.d.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          group.cat.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      return { ...group, items: filteredItems };
+    })
+    .filter((group) => group.items.length > 0);
+
   return (
     <PageShell>
       {/* Hero */}
       <section className="bg-gradient-to-r from-[#075c48] via-[#0b6b55] to-[#0e765d] py-16 text-white">
         <div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 px-6 md:flex-row md:items-end">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl w-full">
             <span className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
               <ShieldCheck size={16} />
-              Smart RTO service catalogue
+              Smart RTO services
             </span>
 
             <p className="mb-2 text-xs font-bold uppercase tracking-widest text-white/75">
@@ -112,383 +128,231 @@ export function Services() {
             </h1>
 
             <p className="mt-3 text-base leading-relaxed text-white/80 md:text-lg">
-              Start a working demo journey or read simple guidance before you
-              begin.
+              Start a service or search the catalogue below.
             </p>
-          </div>
 
-          <div className="flex max-w-xs items-start gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
-            <Info size={20} className="shrink-0 text-white/90" />
-            <div className="text-xs">
-              <strong className="block font-bold text-white">Demo environment</strong>
-              <span className="mt-0.5 block leading-relaxed text-white/75">
-                All records and transactions shown here are fictional.
-              </span>
+            {/* Live Search Bar */}
+            <div className="mt-6 relative max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#167c74]" size={18} />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search services (e.g. Licence, Transfer, eChallan)..."
+                className="pl-10 h-11 bg-white text-[#152321] placeholder:text-[#667572] rounded-xl shadow-md border-0 focus-visible:ring-2 focus-visible:ring-white"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full px-2 py-0.5"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
+
+          {demoMode && (
+            <div className="flex max-w-xs items-start gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
+              <Info size={20} className="shrink-0 text-white/90" />
+              <div className="text-xs">
+                <strong className="block font-bold text-white">Demo environment</strong>
+                <span className="mt-0.5 block leading-relaxed text-white/75">
+                  All records and transactions shown here are fictional.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Service Catalogue List */}
       <main className="mx-auto max-w-6xl px-6 py-14">
-        <div className="space-y-12">
-          {catalog.map((group) => (
-            <section key={group.cat}>
-              <div className="mb-6 flex items-end justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight text-[#152321]">
-                    {group.cat}
-                  </h2>
-                  <p className="mt-1 text-xs text-[#5e6f68]">{group.description}</p>
+        {filteredCatalog.length === 0 ? (
+          <div className="text-center py-16 bg-slate-50 rounded-2xl border border-slate-200">
+            <Search className="mx-auto h-10 w-10 text-slate-400 mb-3" />
+            <h3 className="text-lg font-bold text-slate-800">No services found</h3>
+            <p className="text-sm text-slate-500 mt-1">Try adjusting your search terms.</p>
+            <Button onClick={() => setSearchQuery("")} variant="outline" className="mt-4">
+              Clear Search
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-12">
+            {filteredCatalog.map((group) => (
+              <section key={group.cat}>
+                <div className="mb-6 flex items-end justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h2 className="text-2xl font-extrabold tracking-tight text-[#152321]">
+                      {group.cat}
+                    </h2>
+                    <p className="mt-1 text-xs text-[#5e6f68]">{group.description}</p>
+                  </div>
+
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-[#5e6f68]">
+                    {group.items.length}{" "}
+                    {group.items.length === 1 ? "service" : "services"}
+                  </span>
                 </div>
 
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-[#5e6f68]">
-                  {group.items.length}{" "}
-                  {group.items.length === 1 ? "service" : "services"}
-                </span>
-              </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
+                    return (
+                      <Card
+                        key={item.t}
+                        className="group flex min-h-[220px] flex-col justify-between transition-all hover:-translate-y-1 hover:border-[#167c74] hover:shadow-md"
+                      >
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#ddf3ef] text-[#167c74]">
+                            <Icon size={22} />
+                          </div>
+                          <Badge
+                            variant={item.live ? "success" : "outline"}
+                            className="gap-1.5 font-bold"
+                          >
+                            {item.live && demoMode ? (
+                              <>
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#0d5c45]" />
+                                Working demo
+                              </>
+                            ) : (
+                              <>
+                                <Info size={12} />
+                                Available
+                              </>
+                            )}
+                          </Badge>
+                        </CardHeader>
 
-                  return (
-                    <Card
-                      key={item.t}
-                      className="group flex min-h-[220px] flex-col justify-between transition-all hover:-translate-y-1 hover:border-[#167c74] hover:shadow-md"
-                    >
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#ddf3ef] text-[#167c74]">
-                          <Icon size={22} />
-                        </div>
-                        <Badge
-                          variant={item.live ? "success" : "outline"}
-                          className="gap-1.5 font-bold"
-                        >
-                          {item.live ? (
-                            <>
-                              <span className="h-1.5 w-1.5 rounded-full bg-[#0d5c45]" />
-                              Working demo
-                            </>
-                          ) : (
-                            <>
-                              <Info size={12} />
-                              Guidance only
-                            </>
-                          )}
-                        </Badge>
-                      </CardHeader>
+                        <CardContent className="my-2">
+                          <CardTitle className="text-base group-hover:text-[#167c74]">
+                            {item.t}
+                          </CardTitle>
+                          <CardDescription className="mt-1">
+                            {item.d}
+                          </CardDescription>
+                        </CardContent>
 
-                      <CardContent className="my-2">
-                        <CardTitle className="text-base group-hover:text-[#167c74]">
-                          {item.t}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {item.d}
-                        </CardDescription>
-                      </CardContent>
-
-                      <CardFooter className="pt-2">
-                        <Button
-                          variant="link"
-                          className="p-0 text-xs font-bold text-[#167c74] group-hover:text-[#0d5c45]"
-                          asChild
-                        >
-                          <Link href={item.h} className="flex items-center gap-1.5">
-                            <span>{item.live ? "Start service" : "Read guidance"}</span>
-                            <ArrowRight
-                              size={15}
-                              className="transition-transform group-hover:translate-x-1"
-                            />
-                          </Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+                        <CardFooter className="pt-2">
+                          <Button
+                            variant="link"
+                            className="p-0 text-xs font-bold text-[#167c74] group-hover:text-[#0d5c45]"
+                            asChild
+                          >
+                            <Link href={item.h} className="flex items-center gap-1.5">
+                              <span>{item.live ? "Start service" : "Read guidance"}</span>
+                              <ArrowRight
+                                size={14}
+                                className="transition-transform group-hover:translate-x-1"
+                              />
+                            </Link>
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
       </main>
     </PageShell>
   );
 }
 
-export function VehicleCheck() {
-  const [searched, setSearched] = useState(false);
-  const [registration, setRegistration] = useState("MH10AB1234");
-
-  function handleSearch() {
-    setSearched(true);
-  }
-
-  return (
-    <PageShell>
-      {/* Intro Header */}
-      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-12">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#167c74] text-white shadow-md">
-              <Car size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#0f7655]">
-                Synthetic Vehicle Records
-              </p>
-              <h1 className="my-1 text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
-                Check a demo vehicle
-              </h1>
-            </div>
-          </div>
-          <p className="mt-3 max-w-xl text-sm font-medium text-[#5e6f68]">
-            Search a seeded fictional vehicle registration number to inspect RC details, insurance validity, PUCC expiry and tax status.
-          </p>
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
-        {/* Search Card */}
-        <div className="rounded-3xl border border-[#dce8e5] bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-extrabold text-[#152321]">Vehicle Registration Search</h2>
-              <p className="mt-1 text-xs text-[#5e6f68]">
-                Try searching <strong className="text-[#167c74] font-bold">MH10AB1234</strong>
-              </p>
-            </div>
-            <span className="w-fit rounded-md bg-[#fff1eb] px-3 py-1 text-[10px] font-extrabold text-[#a64524] tracking-wider">
-              DEMO RECORD ONLY
-            </span>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Car className="absolute left-3.5 top-3.5 text-[#5e6f68]" size={19} />
-              <input
-                id="vehicle-registration"
-                value={registration}
-                onChange={(e) => setRegistration(e.target.value.toUpperCase().slice(0, 12))}
-                placeholder="MH10AB1234"
-                className="h-12 w-full rounded-xl border border-[#cfe3dd] bg-[#f8fbf9] pl-11 pr-4 text-sm font-bold tracking-wider text-[#152321] uppercase outline-none focus:border-[#167c74] focus:bg-white focus:ring-4 focus:ring-[#ddf3ef]"
-                autoComplete="off"
-              />
-            </div>
-            <button
-              type="button"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#167c74] px-6 text-sm font-bold text-white shadow-md shadow-[#167c74]/20 transition-all hover:bg-[#126b64]"
-              onClick={handleSearch}
-            >
-              <Search size={18} />
-              Check Record
-            </button>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-xs text-[#5e6f68]">
-            <ShieldCheck size={16} className="text-[#167c74]" />
-            <span>No government databases are queried. Data stays local in browser.</span>
-          </div>
-        </div>
-
-        {/* Result Card */}
-        {searched && (
-          <div className="rounded-3xl border border-[#cfe3dd] bg-white p-6 shadow-md sm:p-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-6">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e7f4ed] px-3 py-1 text-xs font-bold text-[#0d5c45]">
-                  <CheckCircle2 size={15} /> Verified Demo Record
-                </span>
-                <h2 className="mt-3 text-2xl font-black text-[#152321]">Demo Hatchback Car</h2>
-                <p className="text-xs font-semibold text-[#5e6f68] mt-0.5">
-                  Registration: <strong className="text-[#152321]">{registration || "MH10AB1234"}</strong> · Fuel: <strong className="text-[#152321]">Petrol</strong>
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 rounded-2xl bg-[#ddf3ef] px-4 py-3 text-[#167c74]">
-                <ShieldCheck size={24} />
-                <span className="text-xs font-extrabold">Active Status</span>
-              </div>
-            </div>
-
-            {/* Details Grid */}
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-100 bg-[#f9fbfb] p-4">
-                <span className="text-[11px] font-semibold text-[#5e6f68]">Owner Name</span>
-                <strong className="mt-1 block text-sm font-bold text-[#152321]">A**** K****</strong>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-[#f9fbfb] p-4">
-                <span className="text-[11px] font-semibold text-[#5e6f68]">Registration Validity</span>
-                <strong className="mt-1 block text-sm font-bold text-[#0d5c45]">Valid till 04/08/2037</strong>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-[#f9fbfb] p-4">
-                <span className="text-[11px] font-semibold text-[#5e6f68]">Insurance Status</span>
-                <strong className="mt-1 block text-sm font-bold text-[#0d5c45]">Active until 10 Dec 2026</strong>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-[#fffbf8] p-4">
-                <span className="text-[11px] font-semibold text-[#5e6f68]">PUCC Certificate</span>
-                <strong className="mt-1 block text-sm font-bold text-[#a64524]">Expires 12 Sep 2026</strong>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-[#f9fbfb] p-4">
-                <span className="text-[11px] font-semibold text-[#5e6f68]">Road Tax</span>
-                <strong className="mt-1 block text-sm font-bold text-[#0d5c45]">Paid Lifetime</strong>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-[#f9fbfb] p-4">
-                <span className="text-[11px] font-semibold text-[#5e6f68]">RTO Location</span>
-                <strong className="mt-1 block text-sm font-bold text-[#152321]">MH-10 Sangli</strong>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#f0f7f5] p-4 text-xs font-semibold text-[#0f7655]">
-              <Info size={18} className="shrink-0" />
-              <span>This synthetic information is designed for demonstration of the Smart RTO interface.</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </PageShell>
-  );
-}
-
 export function ChallanCheck() {
-  const [searched, setSearched] = useState(false);
+  const [vehicleNo, setVehicleNo] = useState("MH10EA1234");
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(true);
   const [paid, setPaid] = useState(false);
-  const [challanNumber, setChallanNumber] = useState("DEMO-CH-100023");
 
-  function handleSearch() {
-    setSearched(true);
-    setPaid(false);
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!vehicleNo.trim()) return;
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setSearched(true);
+      setPaid(false);
+    }, 400);
   }
 
   return (
     <PageShell>
-      {/* Intro Header */}
-      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-12">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#167c74] text-white shadow-md">
-              <Gavel size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#0f7655]">
-                Demo eChallan Portal
-              </p>
-              <h1 className="my-1 text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
-                Check a fictional challan
-              </h1>
-            </div>
-          </div>
-          <p className="mt-3 max-w-xl text-sm font-medium text-[#5e6f68]">
-            Search seeded traffic challans and experience the simulated payment flow with zero real money.
+      <section className="bg-gradient-to-r from-[#075c48] via-[#0b6b55] to-[#0e765d] py-12 text-white">
+        <div className="mx-auto max-w-4xl px-6">
+          <Badge className="bg-white/20 text-white hover:bg-white/30 border-0 mb-3">
+            Traffic Police & RTO eChallan
+          </Badge>
+          <h1 className="text-2xl font-extrabold md:text-3xl">Pay Traffic eChallan Fines</h1>
+          <p className="mt-2 text-sm text-white/80">
+            Enter your vehicle registration plate or challan number to search and clear pending traffic violations.
           </p>
+
+          <form onSubmit={handleSearch} className="mt-6 flex max-w-lg gap-2">
+            <Input
+              value={vehicleNo}
+              onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
+              placeholder="e.g. MH10EA1234"
+              className="bg-white text-[#152321] font-mono font-bold h-11 uppercase"
+            />
+            <Button type="submit" disabled={loading} className="bg-white text-[#075c48] hover:bg-slate-100 font-bold px-6 h-11">
+              {loading ? "Searching..." : "Check Challan"}
+            </Button>
+          </form>
         </div>
       </section>
 
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-8">
-        {/* Search Card */}
-        <div className="rounded-3xl border border-[#dce8e5] bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-extrabold text-[#152321]">Search eChallan</h2>
-              <p className="mt-1 text-xs text-[#5e6f68]">
-                Try searching <strong className="text-[#167c74] font-bold">DEMO-CH-100023</strong>
-              </p>
-            </div>
-            <span className="w-fit rounded-md bg-[#fff1eb] px-3 py-1 text-[10px] font-extrabold text-[#a64524] tracking-wider">
-              TEST PAYMENT SIMULATION
-            </span>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Gavel className="absolute left-3.5 top-3.5 text-[#5e6f68]" size={19} />
-              <input
-                id="challan-number"
-                value={challanNumber}
-                onChange={(e) => setChallanNumber(e.target.value.toUpperCase().slice(0, 20))}
-                placeholder="DEMO-CH-100023"
-                className="h-12 w-full rounded-xl border border-[#cfe3dd] bg-[#f8fbf9] pl-11 pr-4 text-sm font-bold tracking-wider text-[#152321] uppercase outline-none focus:border-[#167c74] focus:bg-white focus:ring-4 focus:ring-[#ddf3ef]"
-                autoComplete="off"
-              />
-            </div>
-            <button
-              type="button"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#167c74] px-6 text-sm font-bold text-white shadow-md shadow-[#167c74]/20 transition-all hover:bg-[#126b64]"
-              onClick={handleSearch}
-            >
-              <Search size={18} />
-              Search Challan
-            </button>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-xs text-[#5e6f68]">
-            <ShieldCheck size={16} className="text-[#167c74]" />
-            <span>This prototype never connects to real payment gateways or government servers.</span>
-          </div>
-        </div>
-
-        {/* Result Card */}
+      <main className="mx-auto max-w-4xl px-6 py-10">
         {searched && (
-          <div className="rounded-3xl border border-[#cfe3dd] bg-white p-6 shadow-md sm:p-8">
-            {!paid ? (
-              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff1eb] px-3 py-1 text-xs font-bold text-[#a64524]">
-                    Pending Challan · Demo
-                  </span>
-                  <p className="font-mono text-xs font-bold text-[#5e6f68]">{challanNumber}</p>
-                  <h2 className="text-2xl font-black text-[#152321]">Helmet Violation — Demonstration</h2>
-                  <p className="text-xs text-[#5e6f68]">Location: Sangli Highway Circle · Date: 20 Aug 2026</p>
+          <div className="space-y-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between border-b pb-4 mb-4">
+                <div>
+                  <h3 className="font-extrabold text-base text-[#152321]">Vehicle: {vehicleNo}</h3>
+                  <p className="text-xs text-[#5e6f68]">Challan No: CHL-2026-887412 • MH-10 Sangli Traffic RTO</p>
                 </div>
+                <Badge variant={paid ? "success" : "destructive"}>
+                  {paid ? "Paid & Cleared" : "Pending Payment"}
+                </Badge>
+              </div>
 
-                <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#cfe3dd] bg-[#f7faf8] p-6 text-center">
-                  <span className="text-xs font-bold text-[#5e6f68]">Fine Amount</span>
-                  <strong className="text-4xl font-black text-[#152321]">₹500</strong>
-                  <small className="text-[10px] font-bold uppercase tracking-wider text-[#0f7655]">Mock Transaction</small>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                <div>
+                  <span className="text-[#5e6f68] block">Violation Type</span>
+                  <strong className="text-[#152321]">Over-Speeding (Section 183)</strong>
+                </div>
+                <div>
+                  <span className="text-[#5e6f68] block">Date & Time</span>
+                  <strong className="text-[#152321]">24 Aug 2026, 14:20 PM</strong>
+                </div>
+                <div>
+                  <span className="text-[#5e6f68] block">Fine Amount</span>
+                  <strong className="text-[#0d5c45] text-sm">₹ 500.00</strong>
+                </div>
+              </div>
 
-                  <button
-                    type="button"
-                    className="mt-2 w-full rounded-xl bg-[#167c74] py-3 px-6 text-sm font-bold text-white shadow-md shadow-[#167c74]/20 transition-all hover:bg-[#126b64]"
+              <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+                {!paid ? (
+                  <Button
                     onClick={() => setPaid(true)}
+                    className="bg-[#0d5c45] hover:bg-[#094735] font-bold gap-2"
                   >
-                    Pay Test Challan (₹500)
-                  </button>
-
-                  <Link href="/grievance" className="inline-flex items-center gap-1 text-xs font-bold text-[#167c74] hover:underline">
-                    Dispute / Raise Grievance <ArrowRight size={14} />
-                  </Link>
-                </div>
+                    Pay Fine Online (₹ 500)
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#0d5c45]">
+                    <CheckCircle2 size={16} /> Receipt #REC-2026-9912 generated
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="py-6 text-center">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#e7f4ed] text-[#0d5c45]">
-                  <CheckCircle2 size={38} />
-                </div>
-                <h2 className="mt-4 text-2xl font-black text-[#152321]">Test Payment Successful!</h2>
-                <p className="mt-2 text-sm text-[#5e6f68]">
-                  Demonstration challan <strong className="font-bold text-[#152321]">{challanNumber}</strong> has been marked as paid.
-                </p>
-
-                <div className="mx-auto my-6 max-w-sm rounded-2xl border border-[#b9dfd4] bg-[#edf8f5] p-4 text-xs font-semibold text-[#0d5c45]">
-                  <p>Transaction ID: <strong className="font-bold">TESTCH-2026-88421</strong></p>
-                  <p className="mt-1">Date: {new Date().toLocaleDateString()}</p>
-                </div>
-
-                <Link
-                  href="/services"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#167c74] px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[#126b64]"
-                >
-                  Return to Service Catalogue <ArrowRight size={16} />
-                </Link>
-              </div>
-            )}
+            </Card>
           </div>
         )}
-      </div>
+      </main>
     </PageShell>
   );
 }

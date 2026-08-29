@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "./safe-link";
+import { useLanguage } from "./language-provider";
+import { useDemoMode } from "./demo-mode-provider";
 import { useRouter } from "next/navigation";
 import { PageShell } from "./page-shell";
 import {
@@ -11,22 +13,17 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  Clock3,
   Download,
   FileCheck2,
   FileText,
-  IdCard,
   Landmark,
   Loader2,
   LockKeyhole,
-  QrCode,
-  Search,
   ShieldCheck,
   Sparkles,
   UploadCloud,
   UserCheck,
 } from "lucide-react";
-import Image from "next/image";
 import {
   Card,
   CardHeader,
@@ -42,17 +39,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   DemoApplication,
-  Draft,
-  createDemoAadhaarProfile,
-  DEMO_AADHAAR_NUMBER,
-  emptyDraft,
-  loadDraft,
   newAppointmentId,
   newApplicationId,
   newPaymentReference,
   saveApplication,
-  saveDemoProfile,
-  saveDraft,
+  hasSession,
 } from "@/lib/storage";
 import {
   isAppwriteConfigured,
@@ -110,11 +101,11 @@ const VEHICLE_CLASSES: VehicleClassOption[] = [
 ];
 
 const AVAILABLE_DATES = [
-  { dateStr: "29 Aug 2026", day: "Friday", shortDate: "29 Aug", slotsCount: "18 slots open" },
-  { dateStr: "30 Aug 2026", day: "Saturday", shortDate: "30 Aug", slotsCount: "24 slots open" },
-  { dateStr: "31 Aug 2026", day: "Monday", shortDate: "31 Aug", slotsCount: "15 slots open" },
-  { dateStr: "01 Sep 2026", day: "Tuesday", shortDate: "01 Sep", slotsCount: "30 slots open" },
-  { dateStr: "02 Sep 2026", day: "Wednesday", shortDate: "02 Sep", slotsCount: "20 slots open" },
+  { dateStr: "2026-08-29", slotsCount: 18 },
+  { dateStr: "2026-08-30", slotsCount: 24 },
+  { dateStr: "2026-08-31", slotsCount: 15 },
+  { dateStr: "2026-09-01", slotsCount: 30 },
+  { dateStr: "2026-09-02", slotsCount: 20 },
 ];
 
 const AVAILABLE_TIMES = [
@@ -134,20 +125,25 @@ const RTO_OFFICES = [
 
 export function LearnerFlow() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const { enabled: demoMode } = useDemoMode();
+  const [started, setStarted] = useState(false);
   const [step, setStep] = useState<number>(0);
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"appwrite" | "local" | null>(null);
+  const [syncError, setSyncError] = useState("");
 
   // Step 1: Aadhaar & PAN eKYC
-  const [aadhaarNumber, setAadhaarNumber] = useState("9999 8888 7777");
-  const [panNumber, setPanNumber] = useState("ABCDE1234F");
-  const [fullName, setFullName] = useState("Demo Citizen");
-  const [dob, setDob] = useState("15/01/2000");
-  const [guardianName, setGuardianName] = useState("Ramesh Citizen");
-  const [gender, setGender] = useState("Male");
-  const [mobile, setMobile] = useState("9999999999");
-  const [address, setAddress] = useState("Flat 402, Green Avenue, Sangli 416416");
-  const [ekycVerified, setEkycVerified] = useState(true);
+  const [aadhaarNumber, setAadhaarNumber] = useState("");
+  const [panNumber, setPanNumber] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [dob, setDob] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [gender, setGender] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [address, setAddress] = useState("");
+  const [ekycVerified, setEkycVerified] = useState(false);
 
   // Step 2: Medical Disability Checklist & Declaration (Form 1)
   const [noEpilepsy, setNoEpilepsy] = useState(true);
@@ -162,18 +158,60 @@ export function LearnerFlow() {
 
   // Step 4: Document Verification (DigiLocker vs Manual)
   const [docMethod, setDocMethod] = useState<"digilocker" | "manual">("digilocker");
-  const [digilockerLinked, setDigilockerLinked] = useState(true);
   const [manualDocsUploaded, setManualDocsUploaded] = useState(false);
 
   // Step 5: Test Date & Time Slot + RTO
   const [rtoOffice, setRtoOffice] = useState("MH-10 Sangli RTO");
-  const [selectedDate, setSelectedDate] = useState("29 Aug");
+  const [selectedDate, setSelectedDate] = useState("2026-08-29");
   const [selectedTime, setSelectedTime] = useState("11:20 AM");
 
   // Submitted Record
   const [submittedApp, setSubmittedApp] = useState<DemoApplication | null>(null);
 
-  function autofillAadhaarDemo() {
+  useEffect(() => {
+    if (demoMode) return;
+    const timer = window.setTimeout(() => {
+      setAadhaarNumber("");
+      setPanNumber("");
+      setFullName("");
+      setDob("");
+      setGuardianName("");
+      setGender("");
+      setMobile("");
+      setAddress("");
+      setEkycVerified(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [demoMode]);
+
+  const locale = language === "ur" ? "ur-PK" : `${language}-IN`;
+  const formatDate = (date: string, options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(locale, options).format(new Date(`${date}T12:00:00`));
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat(locale, { style: "currency", currency: "INR" }).format(amount);
+
+  function beginApplication() {
+    if (!hasSession()) {
+      router.push("/login?next=/apply/learner-licence");
+      return;
+    }
+    setStarted(true);
+  }
+
+  function continueToDeclaration() {
+    if (!demoMode) {
+      setError("Demo details are unavailable while Demo Mode is off. Turn Demo Mode on to use this fictional prototype flow.");
+      return;
+    }
+    if (!/^9999\s?8888\s?7777$/.test(aadhaarNumber) || !/^ABCDE1234F$/.test(panNumber)) {
+      setError("Use the fictional examples shown: Aadhaar 9999 8888 7777 and PAN ABCDE1234F. Select Fill demo details to add them.");
+      return;
+    }
+    setError("");
+    setStep(1);
+  }
+
+  function fillDemoDetails() {
     setAadhaarNumber("9999 8888 7777");
     setPanNumber("ABCDE1234F");
     setFullName("Demo Citizen");
@@ -203,10 +241,12 @@ export function LearnerFlow() {
 
   async function submitLearnerApplication() {
     setProcessing(true);
+    setSyncStatus(null);
+    setSyncError("");
     const appId = newApplicationId();
     const paymentRef = newPaymentReference();
     const appointmentId = newAppointmentId();
-    const appointmentSlot = `${selectedDate} · ${selectedTime}`;
+    const appointmentSlot = `${formatDate(selectedDate, { day: "numeric", month: "short" })} · ${selectedTime}`;
 
     if (isAppwriteConfigured) {
       try {
@@ -258,9 +298,15 @@ export function LearnerFlow() {
           },
           documentId: appId.toLowerCase().replace(/[^a-z0-9]/g, "-"),
         });
+        setSyncStatus("appwrite");
       } catch (err) {
         console.warn("Appwrite LL sync note:", err);
+        setSyncStatus("local");
+        setSyncError(err instanceof Error ? err.message : "Appwrite rejected the application record.");
       }
+    } else {
+      setSyncStatus("local");
+      setSyncError("Appwrite is not configured for this environment.");
     }
 
     const applicationRecord: DemoApplication = {
@@ -310,23 +356,30 @@ export function LearnerFlow() {
             Learner Licence (LL) Application
           </h1>
           <p className="mt-1 max-w-2xl text-xs font-medium text-[#5e6f68] md:text-sm">
-            Apply online for Form 2 Learner Licence with digital Aadhaar eKYC, Form 1 physical fitness declaration, and live computer test slot booking.
+            Review what you need first, then complete five clear stages. This is a fictional demonstration—no government system is contacted.
           </p>
         </div>
       </section>
 
       {/* Main Content Area */}
       <main className="mx-auto max-w-5xl px-6 py-10">
-        {!submittedApp ? (
+        {!submittedApp && !started ? (
+          <Card className="space-y-6 p-6 md:p-8">
+            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#edf7f4] text-[#167c74]"><FileCheck2 size={21} /></span><div><p className="text-xs font-bold uppercase tracking-wider text-[#167c74]">Step 1 of 5</p><CardTitle>Before you begin</CardTitle><CardDescription>Check the requirements before sharing any information.</CardDescription></div></div>
+            <div className="grid gap-3 text-sm sm:grid-cols-2"><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Eligibility</strong><span className="text-xs text-[#5e6f68]">You must be old enough for the vehicle category you choose and able to make the fitness declaration.</span></div><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Documents</strong><span className="text-xs text-[#5e6f68]">Demo identity details, age or address proof, and a Form 1 declaration. Manual uploads accept PDF or JPG, up to 2 MB each.</span></div><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Fee and time</strong><span className="text-xs text-[#5e6f68]">₹170 demo checkout: ₹150 application fee and ₹20 test fee. Allow about 8 minutes.</span></div><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Need help?</strong><span className="text-xs text-[#5e6f68]">You can go back at any point. Your demo progress is saved on this device after you sign in.</span></div></div>
+            <div className="flex gap-3 rounded-xl border border-[#cfe3dd] bg-[#edf7f4] p-4 text-xs text-[#40564f]"><LockKeyhole size={18} className="shrink-0 text-[#167c74]"/><p className="m-0"><strong>Privacy notice:</strong> This prototype uses fictional demo data only. Do not enter real Aadhaar or PAN details; nothing is sent to a government database.</p></div>
+            <CardFooter className="justify-end border-t border-slate-100 p-0 pt-5"><Button onClick={beginApplication} className="gap-2">Begin application <ArrowRight size={16} /></Button></CardFooter>
+          </Card>
+        ) : !submittedApp ? (
           <div className="space-y-8">
-            {/* 5-Step Process Indicator */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {/* Five-stage journey: overview, identity, combined declaration/category, documents and slot. */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              <Card className="border-[#cfe3dd] bg-[#edf7f4] p-3.5 text-[#167c74]"><span className="text-[10px] font-bold uppercase tracking-wider">Step 1</span><strong className="mt-1 block text-xs text-[#152321]">Before you begin</strong><span className="text-[10px] text-[#5e6f68]">Requirements checked</span></Card>
               {[
-                { id: 0, title: "1. Identity eKYC", sub: "Aadhaar & PAN" },
-                { id: 1, title: "2. Declaration", sub: "Form 1 Medical" },
-                { id: 2, title: "3. Vehicle Types", sub: "Select classes" },
-                { id: 3, title: "4. Documents", sub: "DigiLocker sync" },
-                { id: 4, title: "5. Slot & Pay", sub: "Test date & ₹170" },
+                { id: 0, title: "2. Identity details", sub: "Demo Aadhaar & PAN" },
+                { id: 1, title: "3. Fitness & vehicles", sub: "Declaration and classes" },
+                { id: 2, title: "4. Documents", sub: "Add proof" },
+                { id: 3, title: "5. Slot & payment", sub: "Test date & ₹170" },
               ].map((s) => (
                 <Card
                   key={s.id}
@@ -340,7 +393,7 @@ export function LearnerFlow() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider">
-                      Step {s.id + 1}
+                      Step {s.id + 2}
                     </span>
                     {step > s.id && <Check size={14} className="text-[#167c74]" />}
                   </div>
@@ -357,24 +410,24 @@ export function LearnerFlow() {
               </div>
             )}
 
-            {/* STEP 1: Aadhaar & PAN eKYC Verification */}
+            {/* STEP 2: demo identity details */}
             {step === 0 && (
               <Card className="p-6 space-y-6">
                 <CardHeader className="p-0 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Step 1: Aadhaar & PAN eKYC Verification</CardTitle>
+                    <CardTitle>Step 2: Demo identity details</CardTitle>
                     <CardDescription>
-                      Authenticate your identity through national eKYC database for seamless Learner Licence issuance.
+                      We use these fictional details only to prefill this demo application. No government database is contacted.
                     </CardDescription>
                   </div>
-                  <Button
+                  {demoMode && <Button
                     variant="outline"
                     size="sm"
-                    onClick={autofillAadhaarDemo}
+                    onClick={fillDemoDetails}
                     className="gap-1.5 text-xs text-[#167c74]"
                   >
-                    <Sparkles size={14} /> Auto-fill Demo
-                  </Button>
+                    <Sparkles size={14} /> Fill demo details
+                  </Button>}
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -386,7 +439,9 @@ export function LearnerFlow() {
                         onChange={(e) => setAadhaarNumber(e.target.value)}
                         className="mt-1.5 font-mono"
                         placeholder="9999 8888 7777"
+                        aria-describedby="aadhaar-help"
                       />
+                      <p id="aadhaar-help" className="mt-1 text-[11px] text-[#5e6f68]"><strong>Why we need this:</strong> it demonstrates how a form can prefill basic details. Example: 9999 8888 7777. Use the demo number only; select Fill demo details if you want to use the example.</p>
                     </div>
                     <div>
                       <Label htmlFor="pan">PAN Card Number</Label>
@@ -396,7 +451,9 @@ export function LearnerFlow() {
                         onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
                         className="mt-1.5 font-mono uppercase"
                         placeholder="ABCDE1234F"
+                        aria-describedby="pan-help"
                       />
+                      <p id="pan-help" className="mt-1 text-[11px] text-[#5e6f68]"><strong>Why we need this:</strong> it is a second demo reference. Example: ABCDE1234F. Do not enter a real PAN; select Fill demo details if you want to use the example.</p>
                     </div>
                   </div>
 
@@ -406,10 +463,10 @@ export function LearnerFlow() {
                         <div className="flex items-center gap-2">
                           <UserCheck size={18} className="text-[#167c74]" />
                           <strong className="text-sm font-bold text-[#0d5c45]">
-                            eKYC Authenticated: {fullName}
+                            Demo details ready: {fullName}
                           </strong>
                         </div>
-                        <Badge variant="success">UIDAI & NSDL Verified</Badge>
+                        <Badge variant="success">Demo verification completed — no government database was contacted.</Badge>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -434,8 +491,8 @@ export function LearnerFlow() {
                   )}
                 </CardContent>
                 <CardFooter className="flex justify-end p-0 pt-4 border-t border-slate-100">
-                  <Button onClick={() => setStep(1)} className="gap-2">
-                    Continue to Medical Declaration <ArrowRight size={16} />
+                  <Button onClick={continueToDeclaration} className="gap-2">
+                    Continue to fitness declaration <ArrowRight size={16} />
                   </Button>
                 </CardFooter>
               </Card>
@@ -445,9 +502,9 @@ export function LearnerFlow() {
             {step === 1 && (
               <Card className="p-6 space-y-6">
                 <CardHeader className="p-0">
-                  <CardTitle>Step 2: Form 1 Physical Fitness & Self-Declaration</CardTitle>
+                  <CardTitle>Step 3: Fitness declaration & vehicle categories</CardTitle>
                   <CardDescription>
-                    Statutory medical fitness questions under Section 5 of Central Motor Vehicles Rules 1989.
+                    Answer the fitness questions, then choose the vehicle types you want to learn in this single step.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
@@ -522,6 +579,17 @@ export function LearnerFlow() {
                       </span>
                     </label>
                   </div>
+                  <div className="border-t border-slate-100 pt-5">
+                    <h3 className="text-sm font-extrabold text-[#152321]">Choose vehicle categories</h3>
+                    <p className="mt-1 text-xs text-[#5e6f68]">Choose one or more categories for this demo Learner Licence.</p>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {VEHICLE_CLASSES.map((vc) => {
+                        const isSelected = selectedClasses.includes(vc.id);
+                        return <button key={vc.id} type="button" onClick={() => toggleVehicleClass(vc.id)} className={`rounded-xl border p-3 text-left transition ${isSelected ? "border-[#167c74] bg-[#edf7f4] ring-2 ring-[#167c74]/20" : "border-[#dce8e5] bg-white hover:border-[#167c74]"}`}><span className="text-xl">{vc.icon}</span><strong className="ml-2 text-xs text-[#152321]">{vc.name} ({vc.code})</strong><span className="mt-1 block text-[11px] text-[#5e6f68]">{vc.desc}</span></button>;
+                      })}
+                    </div>
+                    <p className="mt-3 text-xs font-bold text-[#0d5c45]">Selected: {VEHICLE_CLASSES.filter((vehicle) => selectedClasses.includes(vehicle.id)).map((vehicle) => vehicle.code).join(", ")} · Flat demo fee: ₹170</p>
+                  </div>
                 </CardContent>
                 <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
                   <Button variant="outline" onClick={() => setStep(0)}>
@@ -532,85 +600,19 @@ export function LearnerFlow() {
                     disabled={!medicalDeclaration}
                     className="gap-2"
                   >
-                    Select Vehicle Classes <ArrowRight size={16} />
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
-
-            {/* STEP 3: Vehicle Type Selection Cards with Icons */}
-            {step === 2 && (
-              <Card className="p-6 space-y-6">
-                <CardHeader className="p-0">
-                  <CardTitle>Step 3: Select Vehicle Categories for Learner Licence</CardTitle>
-                  <CardDescription>
-                    Choose the vehicle types you want to learn. You may choose multiple categories.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {VEHICLE_CLASSES.map((vc) => {
-                      const isSelected = selectedClasses.includes(vc.id);
-                      return (
-                        <div
-                          key={vc.id}
-                          onClick={() => toggleVehicleClass(vc.id)}
-                          className={`cursor-pointer rounded-2xl border p-5 transition-all hover:scale-[1.01] ${
-                            isSelected
-                              ? "border-[#167c74] bg-[#edf7f4] shadow-sm ring-2 ring-[#167c74]/20"
-                              : "border-[#dce8e5] bg-white hover:border-[#167c74]"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-3xl">{vc.icon}</span>
-                            <Badge variant={isSelected ? "success" : "secondary"}>
-                              {isSelected ? "Selected ✓" : "Click to select"}
-                            </Badge>
-                          </div>
-                          <div className="mt-4">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#0f7655]">
-                              {vc.badge}
-                            </span>
-                            <h3 className="text-base font-extrabold text-[#152321]">
-                              {vc.name} ({vc.code})
-                            </h3>
-                            <p className="mt-1 text-xs text-[#5e6f68] leading-relaxed">{vc.desc}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="rounded-xl border border-[#cfe3dd] bg-[#f8fbf9] p-4 text-xs flex justify-between items-center">
-                    <div>
-                      <strong className="text-[#152321]">Selected Categories:</strong>
-                      <span className="ml-2 text-[#0d5c45] font-bold">
-                        {VEHICLE_CLASSES.filter((v) => selectedClasses.includes(v.id))
-                          .map((v) => v.code)
-                          .join(", ")}
-                      </span>
-                    </div>
-                    <Badge variant="secondary">Flat LL Fee: ₹170</Badge>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
-                  <Button variant="outline" onClick={() => setStep(1)}>
-                    <ArrowLeft size={16} className="mr-2" /> Back
-                  </Button>
-                  <Button onClick={() => setStep(3)} className="gap-2">
-                    Continue to Documents <ArrowRight size={16} />
+                    Continue to documents <ArrowRight size={16} />
                   </Button>
                 </CardFooter>
               </Card>
             )}
 
             {/* STEP 4: Document Verification (DigiLocker vs Manual) */}
-            {step === 3 && (
+            {step === 2 && (
               <Card className="p-6 space-y-6">
                 <CardHeader className="p-0">
-                  <CardTitle>Step 4: Document Verification & Digital Locker</CardTitle>
+                  <CardTitle>Step 4: Add supporting documents</CardTitle>
                   <CardDescription>
-                    Verify your identity and address credentials from national repositories.
+                    Choose a demo prefill or add fictional proof files yourself. Neither option connects to DigiLocker or another government service.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 space-y-5">
@@ -620,7 +622,7 @@ export function LearnerFlow() {
                       size="sm"
                       onClick={() => setDocMethod("digilocker")}
                     >
-                      Instant DigiLocker Sync (Recommended)
+                      Use demo document prefill
                     </Button>
                     <Button
                       variant={docMethod === "manual" ? "default" : "outline"}
@@ -641,7 +643,7 @@ export function LearnerFlow() {
                             </div>
                             <div>
                               <strong className="block text-sm font-bold text-[#0d5c45]">
-                                DigiLocker e-Verification Active
+                                Demo documents ready
                               </strong>
                               <span className="text-xs text-[#5e6f68]">
                                 Identity, age and address proof fetched automatically.
@@ -676,12 +678,13 @@ export function LearnerFlow() {
                     <div className="space-y-4">
                       <div className="rounded-2xl border border-dashed border-[#167c74] bg-[#f8fbf9] p-6 text-center">
                         <UploadCloud className="mx-auto text-[#167c74]" size={36} />
-                        <strong className="mt-2 block text-sm text-[#152321]">
-                          Upload Scanned Proof Documents
+                          <strong className="mt-2 block text-sm text-[#152321]">
+                          Upload demo proof documents
                         </strong>
                         <p className="text-xs text-[#5e6f68]">
-                          Upload 10th marksheet, address proof, and Form 1 (PDF / JPG max 2MB)
+                          Supported formats: PDF or JPG, up to 2 MB each. Example: a readable address proof, age proof, and Form 1.
                         </p>
+                        <p className="mt-2 text-[11px] text-[#5e6f68]">If a file is rejected, check its format and size, then choose Select Files again. You can switch back to demo prefill at any time.</p>
                         <Button
                           size="sm"
                           className="mt-4 gap-1.5"
@@ -694,10 +697,10 @@ export function LearnerFlow() {
                   )}
                 </CardContent>
                 <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
-                  <Button variant="outline" onClick={() => setStep(2)}>
+                  <Button variant="outline" onClick={() => setStep(1)}>
                     <ArrowLeft size={16} className="mr-2" /> Back
                   </Button>
-                  <Button onClick={() => setStep(4)} className="gap-2">
+                  <Button onClick={() => setStep(3)} className="gap-2">
                     Pick Test Date & Pay <ArrowRight size={16} />
                   </Button>
                 </CardFooter>
@@ -705,10 +708,10 @@ export function LearnerFlow() {
             )}
 
             {/* STEP 5: Review, Select Test Date & Slot, and Pay (₹170) */}
-            {step === 4 && (
+            {step === 3 && (
               <Card className="p-6 space-y-6">
                 <CardHeader className="p-0">
-                  <CardTitle>Step 5: Select Test Date & Complete Payment</CardTitle>
+                  <CardTitle>Step 5: Choose a test time and review payment</CardTitle>
                   <CardDescription>
                     Select your RTO office, preferred date & time for the computer exam, and pay statutory fee.
                   </CardDescription>
@@ -772,22 +775,22 @@ export function LearnerFlow() {
                     </Label>
                     <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
                       {AVAILABLE_DATES.map((d) => {
-                        const isDateSelected = selectedDate === d.shortDate;
+                        const isDateSelected = selectedDate === d.dateStr;
                         return (
                           <button
                             key={d.dateStr}
                             type="button"
-                            onClick={() => setSelectedDate(d.shortDate)}
+                            onClick={() => setSelectedDate(d.dateStr)}
                             className={`flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all ${
                               isDateSelected
                                 ? "border-[#167c74] bg-[#edf7f4] text-[#167c74] shadow-xs ring-2 ring-[#167c74]/20"
                                 : "border-[#dce8e5] bg-white hover:bg-[#f4fbf8]"
                             }`}
                           >
-                            <span className="text-[10px] font-bold uppercase tracking-wider">{d.day}</span>
-                            <strong className="text-sm font-black text-[#152321]">{d.shortDate}</strong>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">{formatDate(d.dateStr, { weekday: "long" })}</span>
+                            <strong className="text-sm font-black text-[#152321]">{formatDate(d.dateStr, { day: "numeric", month: "short" })}</strong>
                             <span className="mt-1 rounded bg-[#ddf3ef] px-1.5 py-0.5 text-[9px] font-bold text-[#0f7655]">
-                              {d.slotsCount}
+                              {d.slotsCount} slots open
                             </span>
                           </button>
                         );
@@ -832,7 +835,7 @@ export function LearnerFlow() {
                     <div className="flex items-center gap-2">
                       <CalendarDays size={16} className="text-[#167c74]" />
                       <span className="text-[#5e6f68]">Confirmed Slot:</span>
-                      <strong className="text-[#0d5c45]">{selectedDate} · {selectedTime} at {rtoOffice}</strong>
+                      <strong className="text-[#0d5c45]">{formatDate(selectedDate, { day: "numeric", month: "short" })} · {selectedTime} at {rtoOffice}</strong>
                     </div>
                     <Badge variant="success">Slot Active</Badge>
                   </div>
@@ -841,21 +844,21 @@ export function LearnerFlow() {
                   <div className="rounded-xl border border-[#cfe3dd] bg-white p-4 text-xs space-y-2">
                     <div className="flex justify-between text-[#5e6f68]">
                       <span>Govt Learner Licence Issuance Fee</span>
-                      <strong className="text-[#152321]">₹150.00</strong>
+                      <strong className="text-[#152321]">{formatCurrency(150)}</strong>
                     </div>
                     <div className="flex justify-between text-[#5e6f68]">
                       <span>Computer Online Theory Test Fee</span>
-                      <strong className="text-[#152321]">₹20.00</strong>
+                      <strong className="text-[#152321]">{formatCurrency(20)}</strong>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-sm font-extrabold text-[#152321]">
                       <span>Total Amount Payable</span>
-                      <span className="text-[#0d5c45]">₹170.00 (Demo Test Checkout)</span>
+                      <span className="text-[#0d5c45]">{formatCurrency(170)} (Demo Test Checkout)</span>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
-                  <Button variant="outline" onClick={() => setStep(3)} disabled={processing}>
+                  <Button variant="outline" onClick={() => setStep(2)} disabled={processing}>
                     <ArrowLeft size={16} className="mr-2" /> Back
                   </Button>
                   <Button
@@ -908,6 +911,12 @@ export function LearnerFlow() {
                 <strong className="font-mono text-[#152321]">{submittedApp.paymentReference}</strong>
               </div>
             </div>
+
+            {syncStatus === "appwrite" ? (
+              <p className="text-xs font-bold text-[#0d5c45]" role="status">Saved to Appwrite. This application is available in Dashboard and Tracking.</p>
+            ) : (
+              <p className="mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800" role="status">Saved only on this device. Appwrite did not save this application: {syncError}</p>
+            )}
 
             <div className="flex flex-col gap-3 sm:flex-row justify-center">
               <Button onClick={() => downloadApplicationPdf(submittedApp)} className="gap-2">

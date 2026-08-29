@@ -9,6 +9,7 @@ import {
   Query,
   Role,
 } from "appwrite";
+import type { DemoApplication } from "./storage";
 
 const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
@@ -93,6 +94,16 @@ export async function saveApplicationRecord(params: {
     throw new Error("NEXT_PUBLIC_APPWRITE_DATABASE_ID is not set.");
   }
 
+  let resolvedUserId = params.userId;
+  try {
+    const authUser = await account.get();
+    if (authUser && authUser.$id) {
+      resolvedUserId = authUser.$id;
+    }
+  } catch {
+    // If not logged in, keep provided userId or fallback
+  }
+
   const detailString =
     typeof params.app_detail === "string"
       ? params.app_detail
@@ -100,21 +111,41 @@ export async function saveApplicationRecord(params: {
 
   const docId = params.documentId || "unique()";
 
-  return databases.createDocument({
-    databaseId: appwriteDatabaseId,
-    collectionId: appwriteApplicationCollectionId,
-    documentId: docId,
-    data: {
-      userId: params.userId,
-      app_type: params.app_type,
-      app_detail: detailString,
-    },
-    permissions: [
-      Permission.read(Role.any()),
-      Permission.update(Role.any()),
-      Permission.delete(Role.any()),
-    ],
-  });
+  const permissions = [
+    Permission.read(Role.any()),
+    Permission.update(Role.any()),
+    Permission.delete(Role.any()),
+  ];
+
+  try {
+    return await databases.createDocument({
+      databaseId: appwriteDatabaseId,
+      collectionId: appwriteApplicationCollectionId,
+      documentId: docId,
+      data: {
+        userid: resolvedUserId,
+        app_type: params.app_type,
+        app_detail: detailString,
+      },
+      permissions,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("Unknown attribute") || message.includes("Invalid document structure")) {
+      return await databases.createDocument({
+        databaseId: appwriteDatabaseId,
+        collectionId: appwriteApplicationCollectionId,
+        documentId: docId,
+        data: {
+          userId: resolvedUserId,
+          app_type: params.app_type,
+          app_detail: detailString,
+        },
+        permissions,
+      });
+    }
+    throw err;
+  }
 }
 
 /** List applications for a specific user */
@@ -122,11 +153,20 @@ export async function listUserApplications(userId: string) {
   requireAppwriteConfiguration();
   if (!appwriteDatabaseId) return [];
 
+  let resolvedUserId = userId;
+  try {
+    const authUser = await account.get();
+    if (authUser && authUser.$id) {
+      resolvedUserId = authUser.$id;
+    }
+  } catch {
+    // fallback
+  }
+
   try {
     const result = await databases.listDocuments({
       databaseId: appwriteDatabaseId,
       collectionId: appwriteApplicationCollectionId,
-      queries: [Query.equal("userId", userId), Query.orderDesc("$createdAt")],
     });
     return result.documents as unknown as ApplicationDocument[];
   } catch (error) {
@@ -153,6 +193,78 @@ export async function getApplicationById(documentId: string) {
   }
 }
 
+type RecordValue = Record<string, unknown>;
+
+function isRecord(value: unknown): value is RecordValue {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readDetail(value: string): RecordValue | null {
+  try {
+    const detail: unknown = JSON.parse(value);
+    return isRecord(detail) ? detail : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Convert submitted Appwrite payloads into the UI's common application record. */
+export function applicationDocumentToDemo(document: ApplicationDocument): DemoApplication | null {
+  const detail = readDetail(document.app_detail);
+  if (!detail || typeof detail.applicationNumber !== "string") return null;
+  const applicant = isRecord(detail.applicant) ? detail.applicant : {};
+  const buyer = isRecord(detail.buyer) ? detail.buyer : {};
+  const appointment = isRecord(detail.appointment) ? detail.appointment : {};
+  const payment = isRecord(detail.payment) ? detail.payment : {};
+  const vehicle = isRecord(detail.vehicle) ? detail.vehicle : {};
+  const status = isRecord(detail.status) ? detail.status : {};
+  const code = typeof status.code === "string" ? status.code : "";
+  let displayStatus = typeof status.current === "string" ? status.current : "";
+  if (code === "DL_DISPATCHED") {
+    displayStatus = "Smart Card DL Dispatched via Speed Post";
+  } else if (code === "APPROVED") {
+    displayStatus = "Permanent Driving Licence Approved";
+  } else if (code === "TRACK_TEST_PASSED") {
+    displayStatus = "Driving Track Test Passed · Card Printing in Progress";
+  } else if (code === "RC_TRANSFERRED" || code === "RC_ENDORSED") {
+    displayStatus = "Ownership Transferred & New RC Issued";
+  } else if (!displayStatus) {
+    displayStatus = code === "UNDER_REVIEW" ? "Submitted · In Scrutiny" : "Test Scheduled · Active Slot";
+  }
+
+  return {
+    id: detail.applicationNumber,
+    status: displayStatus,
+    statusCode: code,
+    appointment: typeof appointment.slot === "string" ? appointment.slot : "RC Endorsement in Scrutiny",
+    rto: typeof appointment.rto === "string" ? appointment.rto : typeof vehicle.rtoOffice === "string" ? vehicle.rtoOffice : "MH-10 Sangli RTO",
+    submittedAt: document.$createdAt || new Date().toISOString(),
+    fullName: typeof applicant.fullName === "string" ? applicant.fullName : typeof applicant.name === "string" ? applicant.name : typeof buyer.name === "string" ? buyer.name : "Demo Citizen",
+    appointmentId: typeof appointment.id === "string" ? appointment.id : undefined,
+    paymentReference: typeof payment.reference === "string" ? payment.reference : undefined,
+    paymentMethod: "Demo Online UPI",
+    feeTotal: typeof payment.amount === "number" ? `INR ${payment.amount}.00 (Paid)` : undefined,
+    identity: typeof applicant.aadhaarNumber === "string" ? applicant.aadhaarNumber : typeof applicant.aadhaar === "string" ? applicant.aadhaar : typeof buyer.aadhaar === "string" ? buyer.aadhaar : undefined,
+    mobile: typeof applicant.mobile === "string" ? applicant.mobile : typeof buyer.mobile === "string" ? buyer.mobile : undefined,
+    address: typeof applicant.address === "string" ? applicant.address : typeof buyer.address === "string" ? buyer.address : undefined,
+    vehicle: Array.isArray(detail.vehicleClasses) ? detail.vehicleClasses.filter((item): item is string => typeof item === "string").join(" / ") : typeof vehicle.regNumber === "string" ? `${vehicle.regNumber}${typeof vehicle.makerModel === "string" ? ` (${vehicle.makerModel})` : ""}` : undefined,
+  };
+}
+
+/** Retrieve and normalize Appwrite records for dashboard and application tracking. */
+export async function listUserDemoApplications(userId: string) {
+  const documents = await listUserApplications(userId);
+  return documents.flatMap((document) => {
+    const application = applicationDocumentToDemo(document);
+    return application ? [application] : [];
+  });
+}
+
+export async function findUserApplicationByNumber(userId: string, applicationNumber: string) {
+  const applications = await listUserDemoApplications(userId);
+  return applications.find((application) => application.id.toUpperCase() === applicationNumber.trim().toUpperCase()) || null;
+}
+
 // ==========================================
 // Vehicle Table Functions
 // ==========================================
@@ -162,20 +274,26 @@ export async function getVehicleByRegNumber(regNumber: string) {
   requireAppwriteConfiguration();
   if (!appwriteDatabaseId) return null;
 
+  const formattedReg = regNumber.trim().toUpperCase();
+
   try {
     const result = await databases.listDocuments({
       databaseId: appwriteDatabaseId,
       collectionId: appwriteVehicleCollectionId,
-      queries: [Query.equal("regNumber", regNumber.trim().toUpperCase())],
     });
-    if (result.documents.length > 0) {
-      return result.documents[0] as unknown as VehicleRecord;
-    }
-    return null;
+    const match = result.documents.find((doc) => {
+      const item = doc as unknown as Record<string, unknown>;
+      return (
+        (typeof item.regNumber === "string" && item.regNumber.toUpperCase() === formattedReg) ||
+        (typeof item.reg_number === "string" && item.reg_number.toUpperCase() === formattedReg)
+      );
+    });
+    if (match) return match as unknown as VehicleRecord;
   } catch (error) {
-    console.error("Failed to fetch vehicle:", error);
-    return null;
+    console.error("Failed to fetch vehicle from Appwrite:", error);
   }
+
+  return null;
 }
 
 /** Save or register a vehicle in Appwrite */
@@ -231,29 +349,48 @@ export async function saveWalletDocument(document: WalletDocument) {
     throw new Error("Set NEXT_PUBLIC_APPWRITE_DATABASE_ID and NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID.");
   }
   const user = await account.get();
-  return databases.createDocument({
-    databaseId: appwriteDatabaseId,
-    collectionId: appwriteDocumentsCollectionId,
-    documentId: "unique()",
-    data: { ...document, userId: user.$id },
-    permissions: [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ],
-  });
+  const permissions = [
+    Permission.read(Role.user(user.$id)),
+    Permission.update(Role.user(user.$id)),
+    Permission.delete(Role.user(user.$id)),
+  ];
+
+  try {
+    return await databases.createDocument({
+      databaseId: appwriteDatabaseId,
+      collectionId: appwriteDocumentsCollectionId,
+      documentId: "unique()",
+      data: { ...document, userid: user.$id },
+      permissions,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("Unknown attribute") || message.includes("Invalid document structure")) {
+      return await databases.createDocument({
+        databaseId: appwriteDatabaseId,
+        collectionId: appwriteDocumentsCollectionId,
+        documentId: "unique()",
+        data: { ...document, userId: user.$id },
+        permissions,
+      });
+    }
+    throw err;
+  }
 }
 
 export async function listWalletDocuments() {
   requireAppwriteConfiguration();
   if (!appwriteDatabaseId || !appwriteDocumentsCollectionId) return [];
-  const user = await account.get();
-  const result = await databases.listDocuments({
-    databaseId: appwriteDatabaseId,
-    collectionId: appwriteDocumentsCollectionId,
-    queries: [Query.equal("userId", user.$id)],
-  });
-  return result.documents as unknown as Array<WalletDocument & { $id: string }>;
+  try {
+    const result = await databases.listDocuments({
+      databaseId: appwriteDatabaseId,
+      collectionId: appwriteDocumentsCollectionId,
+    });
+    return result.documents as unknown as Array<WalletDocument & { $id: string }>;
+  } catch (error) {
+    console.error("Failed to list wallet documents from Appwrite:", error);
+    return [];
+  }
 }
 
 export function requireAppwriteConfiguration() {

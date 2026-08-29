@@ -1,4 +1,5 @@
 import { GuidePage } from "@/components/guide-page";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 export function generateStaticParams() {
   return [
@@ -23,5 +24,12 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <GuidePage slug={slug} />;
+  return (
+    <>
+      <main className="min-h-screen bg-slate-50 pb-24 md:pb-8">
+        <GuidePage slug={slug} />
+      </main>
+      <MobileBottomNav />
+    </>
+  );
 }

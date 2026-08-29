@@ -4,10 +4,16 @@ import { hasSession } from "@/lib/storage";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const PUBLIC_PATHS = new Set(["/login", "/register", "/auth/callback"]);
+// Information is public. Signing in is only needed when someone starts or
+// manages a demo application containing their saved details.
+const PUBLIC_PATHS = new Set([
+  "/", "/login", "/register", "/auth/callback", "/services", "/how-it-works",
+  "/help", "/about", "/contact", "/privacy", "/security", "/accessibility",
+  "/terms", "/refund-policy", "/apply/learner-licence",
+]);
 
 function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.has(pathname);
+  return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/guides/");
 }
 
 /**

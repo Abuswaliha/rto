@@ -4,6 +4,7 @@ export type Draft = {
 export type DemoApplication = {
   id: string;
   status: string;
+  statusCode?: string;
   appointment: string;
   rto: string;
   submittedAt: string;

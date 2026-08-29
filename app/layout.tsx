@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/components/language-provider";
 import { AccessibilityProvider } from "@/components/accessibility-provider";
 import { SmoothScrollProvider } from "@/components/motion/smooth-scroll-provider";
 import { AuthGuard } from "@/components/auth-guard";
+import { DemoModeProvider } from "@/components/demo-mode-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -47,11 +48,11 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning>
         <AccessibilityProvider>
-          <LanguageProvider>
+          <DemoModeProvider><LanguageProvider>
             <SmoothScrollProvider>
               <AuthGuard>{children}</AuthGuard>
             </SmoothScrollProvider>
-          </LanguageProvider>
+          </LanguageProvider></DemoModeProvider>
         </AccessibilityProvider>
       </body>
     </html>

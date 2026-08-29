@@ -5,14 +5,11 @@ import Link from "./safe-link";
 import { emptyDraft, hasSession, loadApplication, loadDraft, type Draft } from "@/lib/storage";
 
 const stepNames = [
-  "Eligibility & identity",
-  "Personal details",
-  "Address details",
-  "Licence category",
-  "Choose your RTO",
-  "Documents & appointment",
-  "Declaration",
-  "Review & submit",
+  "Before you begin",
+  "Identity details",
+  "Fitness & vehicle choice",
+  "Documents",
+  "Test slot & payment",
 ];
 
 export default function HomeProgressCard() {
@@ -31,11 +28,11 @@ export default function HomeProgressCard() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const currentIndex = submitted ? 7 : Math.min(Math.max(draft.step, 0), 7);
-  const completedCount = submitted ? 8 : currentIndex;
-  const progress = Math.round((completedCount / 8) * 100);
+  const currentIndex = submitted ? 4 : Math.min(Math.max(draft.step, 0), 4);
+  const completedCount = submitted ? 5 : currentIndex;
+  const progress = Math.round((completedCount / 5) * 100);
   const visibleSteps = useMemo(() => {
-    const start = Math.min(Math.max(currentIndex - 1, 0), 5);
+    const start = Math.min(Math.max(currentIndex - 1, 0), 2);
     return stepNames.slice(start, start + 3).map((name, offset) => ({ name, index: start + offset }));
   }, [currentIndex]);
 
@@ -59,7 +56,7 @@ export default function HomeProgressCard() {
     <aside className="journey-card" aria-label="Your learner licence progress">
       <div className="card-head"><span className="badge">Demo / Mock service</span><span>{submitted ? "Submitted" : "Saved locally"}</span></div>
       <h2>Learner Licence</h2><p>Your application, explained one step at a time.</p>
-      <div className="progress-row"><strong>{progress}% complete</strong><span>{submitted ? "All 8 steps" : `Step ${currentIndex + 1} of 8`}</span></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
+      <div className="progress-row"><strong>{progress}% complete</strong><span>{submitted ? "All 5 steps" : `Step ${currentIndex + 1} of 5`}</span></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
       <ol className="mini-steps">{visibleSteps.map(({ name, index }) => {
         const done = submitted || index < currentIndex;
         const active = !submitted && index === currentIndex;

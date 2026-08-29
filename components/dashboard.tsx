@@ -42,10 +42,10 @@ import {
 } from "@/lib/storage";
 import { PageShell } from "./page-shell";
 import { appointmentParts } from "@/lib/appointment";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
   isAppwriteConfigured,
-  listUserApplications,
-  ApplicationDocument,
+  listUserDemoApplications,
 } from "@/lib/appwrite";
 import {
   downloadApplicationPdf,
@@ -139,9 +139,8 @@ export function Dashboard() {
   const [application, setApplication] = useState<DemoApplication | null>(null);
   const [applicationsList, setApplicationsList] = useState<DemoApplication[]>([]);
   const [profile, setProfile] = useState<DemoAadhaarProfile | null>(null);
-  const [appwriteApps, setAppwriteApps] = useState<ApplicationDocument[]>([]);
+  const [appwriteApps, setAppwriteApps] = useState<DemoApplication[]>([]);
   const [activeCategory, setActiveCategory] = useState<"all" | "licence" | "vehicle" | "enforcement">("all");
-  const [loadingDb, setLoadingDb] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -154,14 +153,9 @@ export function Dashboard() {
     }, 0);
 
     if (isAppwriteConfigured) {
-      setLoadingDb(true);
-      listUserApplications("user_123456")
+      listUserDemoApplications("user_123456")
         .then((items) => {
           setAppwriteApps(items);
-          setLoadingDb(false);
-        })
-        .catch(() => {
-          setLoadingDb(false);
         });
     }
 
@@ -169,7 +163,8 @@ export function Dashboard() {
   }, []);
 
   const progress = Math.round(((draft?.step || 0) / 5) * 100);
-  const allApps = applicationsList.length > 0 ? applicationsList : application ? [application] : [];
+  const localApps = applicationsList.length > 0 ? applicationsList : application ? [application] : [];
+  const allApps = [...appwriteApps, ...localApps.filter((local) => !appwriteApps.some((remote) => remote.id === local.id))];
   const hasApp = allApps.length > 0 || appwriteApps.length > 0;
 
   const filteredServices = SERVICES_CATALOG.filter(
@@ -260,7 +255,7 @@ export function Dashboard() {
       </section>
 
       {/* Main Dashboard Layout */}
-      <div className="mx-auto max-w-6xl px-6 py-10 space-y-10">
+      <div className="mx-auto max-w-6xl px-6 py-10 pb-20 space-y-10">
         {/* SECTION 1: Your Active Applications */}
         <section className="space-y-4">
           <div className="flex items-end justify-between border-b border-slate-100 pb-3">
@@ -471,6 +466,7 @@ export function Dashboard() {
           </div>
         </section>
       </div>
+    <MobileBottomNav />
     </PageShell>
   );
 }

@@ -1332,6 +1332,79 @@ html.smooth-ready {
   margin-top: 46px;
 }
 
+.process-illustration {
+  display: block;
+  width: min(640px, 100%);
+  height: auto;
+  margin: 22px auto -20px;
+  color: #167c74;
+}
+
+/* Mobile sign-in: a compact journey checkpoint, not a squeezed desktop card. */
+@media (max-width: 1023px) {
+  .login-card {
+    border-radius: 24px;
+    box-shadow: 0 18px 48px rgba(21, 41, 35, 0.13);
+  }
+
+  .login-intro {
+    min-height: 172px;
+    padding: 24px 24px 22px;
+  }
+
+  .login-intro > div {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    align-items: start;
+  }
+
+  .login-intro > div > span {
+    grid-row: span 2;
+    margin: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .login-intro h1 {
+    margin: 5px 0 0;
+    font-size: 26px;
+    line-height: 1.05;
+  }
+
+  .login-intro p:not(:first-of-type),
+  .login-intro ul {
+    display: none;
+  }
+
+  .login-form {
+    position: relative;
+    padding: 26px 24px 28px;
+  }
+
+  .login-form::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 28px;
+    width: 52px;
+    height: 7px;
+    border-radius: 0 0 8px 8px;
+    background: #e87343;
+  }
+}
+
+@media (max-width: 420px) {
+  .login-intro {
+    padding-inline: 20px;
+  }
+
+  .login-form {
+    padding-inline: 20px;
+  }
+}
+
 .process-grid article {
   position: relative;
   min-height: 215px;
@@ -1770,6 +1843,9 @@ html.smooth-ready {
   .popular-service-grid,
   .process-grid {
     grid-template-columns: 1fr;
+  }
+  .process-illustration {
+    display: none;
   }
   .step-sidebar {
     display: none;
