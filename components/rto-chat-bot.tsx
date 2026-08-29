@@ -297,45 +297,45 @@ export function RtoChatBot() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end print:hidden">
+    <div className="fixed bottom-[74px] right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end print:hidden">
       {/* Floating Chat Trigger Button with Shadcn Button */}
       {!isOpen && (
         <Button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group relative flex h-12 items-center gap-2.5 rounded-full bg-gradient-to-r from-[#167c74] to-[#0e5c56] px-4.5 py-2.5 text-white shadow-xl shadow-[#167c74]/25 hover:scale-105 hover:shadow-2xl hover:shadow-[#167c74]/40 active:scale-95 transition-all duration-300 border-0"
+          className="group relative flex h-11 sm:h-12 items-center gap-2 sm:gap-2.5 rounded-full bg-gradient-to-r from-[#167c74] to-[#0e5c56] px-3.5 sm:px-4.5 py-2 text-white shadow-xl shadow-[#167c74]/25 hover:scale-105 hover:shadow-2xl hover:shadow-[#167c74]/40 active:scale-95 transition-all duration-300 border-0"
           aria-label="Open Smart RTO Assistant Chatbot"
         >
-          <span className="relative grid h-7 w-7 place-items-center rounded-full bg-white/20">
-            <Bot size={18} className="transition-transform group-hover:rotate-12" />
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#167c74] animate-pulse" />
+          <span className="relative grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-full bg-white/20">
+            <Bot size={16} className="transition-transform group-hover:rotate-12" />
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#167c74] animate-pulse" />
           </span>
-          <span className="text-xs font-bold tracking-tight">Ask RTO Assistant</span>
-          <Sparkles size={13} className="text-amber-300" />
+          <span className="text-[11px] sm:text-xs font-bold tracking-tight">Ask RTO Assistant</span>
+          <Sparkles size={12} className="text-amber-300" />
         </Button>
       )}
 
       {/* Shadcn Card Floating Chat Modal */}
       {isOpen && (
         <Card
-          className={`flex w-[calc(100vw-24px)] max-w-[380px] flex-col overflow-hidden rounded-3xl border border-[#cfe3dd] bg-white shadow-2xl transition-all duration-300 sm:w-[390px] p-0 gap-0 ${
-            isMinimized ? "h-15" : "h-[500px] max-h-[80vh]"
+          className={`flex w-[calc(100vw-24px)] sm:w-[390px] max-w-[400px] flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-[#cfe3dd] bg-white shadow-2xl transition-all duration-300 p-0 gap-0 ${
+            isMinimized ? "h-14 sm:h-15" : "h-[min(520px,calc(100dvh-140px))] max-h-[82vh]"
           }`}
           role="dialog"
           aria-label="Smart RTO Assistant Chatbot"
         >
           {/* Card Header */}
-          <CardHeader className="flex h-15 shrink-0 flex-row items-center justify-between border-b border-[#146b64] bg-gradient-to-r from-[#167c74] via-[#126b64] to-[#0c4e48] px-4 py-0 text-white space-y-0">
-            <div className="flex items-center gap-2.5">
-              <MessageAvatar fallback={<Bot size={16} className="text-white" />} className="h-8 w-8 bg-white/15 ring-1 ring-white/20 text-white" />
+          <CardHeader className="flex h-14 sm:h-15 shrink-0 flex-row items-center justify-between border-b border-[#146b64] bg-gradient-to-r from-[#167c74] via-[#126b64] to-[#0c4e48] px-3.5 sm:px-4 py-0 text-white space-y-0">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <MessageAvatar fallback={<Bot size={15} className="text-white" />} className="h-7 w-7 sm:h-8 sm:w-8 bg-white/15 ring-1 ring-white/20 text-white" />
               <div>
-                <CardTitle className="m-0 text-xs font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                <CardTitle className="m-0 text-[11px] sm:text-xs font-extrabold tracking-tight text-white flex items-center gap-1 sm:gap-1.5">
                   Smart RTO Assistant
-                  <Badge variant="secondary" className="bg-amber-400/25 text-amber-100 text-[9px] px-1.5 py-0 border-0 flex items-center gap-0.5">
-                    <Sparkles size={9} className="text-amber-300" /> Mistral AI
+                  <Badge variant="secondary" className="bg-amber-400/25 text-amber-100 text-[8px] sm:text-[9px] px-1 sm:px-1.5 py-0 border-0 flex items-center gap-0.5">
+                    <Sparkles size={8} className="text-amber-300" /> Mistral AI
                   </Badge>
                 </CardTitle>
-                <p className="m-0 text-[10px] text-emerald-100/90 font-medium">Quick transport & licence guide</p>
+                <p className="m-0 text-[9px] sm:text-[10px] text-emerald-100/90 font-medium">Quick transport & licence guide</p>
               </div>
             </div>
 
@@ -346,10 +346,10 @@ export function RtoChatBot() {
                 size="icon"
                 onClick={handleClearChat}
                 title="Clear conversation"
-                className="h-7 w-7 text-emerald-100 hover:bg-white/15 hover:text-white"
+                className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-100 hover:bg-white/15 hover:text-white"
                 aria-label="Clear chat"
               >
-                <RotateCcw size={13} />
+                <RotateCcw size={12} />
               </Button>
               <Button
                 type="button"
@@ -357,10 +357,10 @@ export function RtoChatBot() {
                 size="icon"
                 onClick={() => setIsMinimized((v) => !v)}
                 title={isMinimized ? "Expand" : "Minimize"}
-                className="h-7 w-7 text-emerald-100 hover:bg-white/15 hover:text-white"
+                className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-100 hover:bg-white/15 hover:text-white"
                 aria-label={isMinimized ? "Expand chat" : "Minimize chat"}
               >
-                {isMinimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                {isMinimized ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
               </Button>
               <Button
                 type="button"
@@ -368,10 +368,10 @@ export function RtoChatBot() {
                 size="icon"
                 onClick={() => setIsOpen(false)}
                 title="Close chat"
-                className="h-7 w-7 text-emerald-100 hover:bg-white/20 hover:text-white"
+                className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-100 hover:bg-white/20 hover:text-white"
                 aria-label="Close chat"
               >
-                <X size={15} />
+                <X size={14} />
               </Button>
             </div>
           </CardHeader>
