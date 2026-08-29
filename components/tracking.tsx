@@ -20,7 +20,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { DemoApplication } from "@/lib/storage";
+import { DemoApplication, loadApplication, loadApplicationsList } from "@/lib/storage";
 import { findUserApplicationByNumber, isAppwriteConfigured, listUserDemoApplications } from "@/lib/appwrite";
 import { useDemoMode } from "./demo-mode-provider";
 import { PageShell } from "./page-shell";
@@ -55,37 +55,52 @@ export function Tracking() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    async function loadDemoApps() {
+    async function loadAllApps() {
       setLoading(true);
       setNotFound(false);
       setLookupNotice("");
+
+      // 1. Load local applications first
+      const localList = loadApplicationsList();
+      const localSingle = loadApplication();
+      const combinedLocal: DemoApplication[] = [...localList];
+      if (localSingle && !combinedLocal.some((a) => a.id === localSingle.id)) {
+        combinedLocal.unshift(localSingle);
+      }
+
+      if (combinedLocal.length > 0) {
+        setAppwriteApps(combinedLocal);
+        setCurrentApp(combinedLocal[0]);
+        setSearchQuery(combinedLocal[0].id);
+        setLookupNotice(`Application ${combinedLocal[0].id} loaded from local records.`);
+      }
+
+      // 2. Fetch Appwrite records and merge
       if (isAppwriteConfigured) {
         try {
           const docs = await listUserDemoApplications("user_123456");
           if (docs && docs.length > 0) {
-            setAppwriteApps(docs);
-            setCurrentApp(docs[0]);
-            setSearchQuery(docs[0].id);
-            setLookupNotice("Live application records loaded from Appwrite Cloud.");
-          } else {
-            setAppwriteApps([]);
-            setCurrentApp(null);
-            setLookupNotice("No demo application records found in Appwrite.");
+            setAppwriteApps((prev) => {
+              const existingIds = new Set(prev.map((a) => a.id));
+              const newDocs = docs.filter((d) => !existingIds.has(d.id));
+              return [...prev, ...newDocs];
+            });
+
+            if (combinedLocal.length === 0) {
+              setCurrentApp(docs[0]);
+              setSearchQuery(docs[0].id);
+              setLookupNotice("Live application records loaded from Appwrite Cloud.");
+            }
           }
         } catch {
-          setLookupNotice("Appwrite records could not be loaded.");
-          setAppwriteApps([]);
-          setCurrentApp(null);
+          // Keep local records active
         }
-      } else {
-        setLookupNotice("Appwrite is not configured.");
-        setAppwriteApps([]);
-        setCurrentApp(null);
       }
+
       setLoading(false);
     }
 
-    void loadDemoApps();
+    void loadAllApps();
   }, []);
 
   async function performLookup(rawQuery: string) {
@@ -94,37 +109,47 @@ export function Tracking() {
 
     setSearching(true);
     setNotFound(false);
-    setLookupNotice("Searching Appwrite records...");
+    setLookupNotice("Searching application records...");
 
     try {
+      // 1. Check Local Storage First
+      const localList = loadApplicationsList();
+      const localSingle = loadApplication();
+      const allLocal = [...localList];
+      if (localSingle && !allLocal.some((a) => a.id === localSingle.id)) {
+        allLocal.unshift(localSingle);
+      }
+
+      const localMatch = allLocal.find((a) => (a.id || "").toUpperCase() === query) ||
+        appwriteApps.find((a) => (a.id || "").toUpperCase() === query);
+
+      if (localMatch) {
+        setCurrentApp(localMatch);
+        setLookupNotice(`Application ${localMatch.id} found in local records.`);
+        setSearching(false);
+        return;
+      }
+
+      // 2. If not found locally, search Appwrite Cloud
       if (isAppwriteConfigured) {
         const remote = await findUserApplicationByNumber("user_123456", query);
         if (remote) {
           setAppwriteApps((current) => [remote, ...current.filter((item) => item.id !== remote.id)]);
           setCurrentApp(remote);
-          setLookupNotice(`Application ${remote.id} verified & loaded from Appwrite.`);
+          setLookupNotice(`Application ${remote.id} verified & loaded from Appwrite Cloud.`);
           setSearching(false);
           return;
         }
       }
 
-      // Check already loaded Appwrite list
-      const localMatch = appwriteApps.find((a) => (a.id || "").toUpperCase() === query);
-      if (localMatch) {
-        setCurrentApp(localMatch);
-        setLookupNotice(`Application ${localMatch.id} loaded from Appwrite.`);
-        setSearching(false);
-        return;
-      }
-
-      // Application not found in Appwrite
+      // 3. Not found in local or Appwrite
       setCurrentApp(null);
       setNotFound(true);
-      setLookupNotice(`Application "${query}" not found in Appwrite.`);
+      setLookupNotice(`Application "${query}" not found in local records or Appwrite.`);
     } catch {
       setCurrentApp(null);
       setNotFound(true);
-      setLookupNotice("Error searching for application record in Appwrite.");
+      setLookupNotice("Error searching for application record.");
     } finally {
       setSearching(false);
     }

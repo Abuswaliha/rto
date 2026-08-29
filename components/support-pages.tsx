@@ -577,22 +577,22 @@ export function Wallet() {
                 Digital Document Wallet
               </h1>
               <p className="mt-1 max-w-2xl text-xs font-medium text-[#5e6f68] md:text-sm">
-                {demoMode
-                  ? "Demo identity, vehicle, and licence credentials saved to your Appwrite wallet."
-                  : "No sample identity or vehicle credentials are shown in Standard view."}
+                Access your Parivahan and DigiLocker linked credentials, verify digital documents with secure QR codes, and export official vector PDFs.
               </p>
             </div>
 
-            {demoMode && <div className="flex flex-wrap gap-2.5">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={saveWalletToAppwrite}
-                disabled={walletSyncing}
-                className="gap-1.5 font-bold"
-              >
-                <Cloud size={14} /> {walletSyncing ? "Saving…" : "Save Wallet"}
-              </Button>
+            <div className="flex flex-wrap gap-2.5">
+              {demoMode && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={saveWalletToAppwrite}
+                  disabled={walletSyncing}
+                  className="gap-1.5 font-bold"
+                >
+                  <Cloud size={14} /> {walletSyncing ? "Saving…" : "Save Wallet"}
+                </Button>
+              )}
               {(["Aadhaar", "PAN"] as const).map((type) => (
                 <Button
                   key={type}
@@ -603,9 +603,9 @@ export function Wallet() {
                   + Add {type}
                 </Button>
               ))}
-            </div>}
+            </div>
           </div>
-          {demoMode && documentStatus && (
+          {documentStatus && (
             <p className="mt-3 text-xs font-semibold text-[#0f7655]">{documentStatus}</p>
           )}
         </div>
@@ -613,97 +613,6 @@ export function Wallet() {
 
       {/* Main Wallet Grid - Full Screen Width */}
       <div className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-8 lg:px-12 space-y-8">
-        {!demoMode ? (
-          <section className="mx-auto max-w-2xl rounded-3xl border border-[#d8e5e0] bg-white px-6 py-14 text-center shadow-sm">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#eaf4ef] text-[#167c74]">
-              <WalletCards size={26} />
-            </div>
-            <h2 className="mt-5 text-xl font-extrabold text-[#152321]">Your wallet is private</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#5e6f68]">
-              Standard view does not show, create, or store sample credentials. You can prepare a document action below without sharing personal records with this prototype.
-            </p>
-            {!appwriteAuthenticated ? (
-              <div className="mt-6 rounded-2xl border border-[#cfe3dd] bg-[#f2f8f6] p-4">
-                <p className="m-0 text-xs leading-5 text-[#405e54]">Connect your Google account through Appwrite before adding private documents. Local demo sign-in cannot access the storage bucket.</p>
-                <Link href="/login?next=%2Fwallet" className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-[#167c74] px-4 text-xs font-bold text-white hover:bg-[#126b64]">Connect secure account</Link>
-              </div>
-            ) : <div className="mx-auto mt-7 max-w-xl overflow-hidden rounded-2xl border border-[#cfe3dd] bg-[#fbfdfc] text-left">
-              <div className="border-b border-[#e4efeb] bg-[#f2f8f6] px-4 py-3">
-                <p className="m-0 text-xs font-extrabold text-[#173b32]">Add a private document</p>
-                <p className="mt-0.5 text-[11px] text-[#687d75]">Choose its purpose first, then select a PDF or image.</p>
-              </div>
-              <div className="space-y-5 p-4">
-                <div>
-                  <div className="mb-2 flex items-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">1</span><span className="text-xs font-bold text-[#405e54]">Document category</span></div>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {[
-                  { type: "Photo" as const, label: "Applicant photo", detail: "Clear face image", icon: UserCheck },
-                  { type: "Address Proof" as const, label: "Address proof", detail: "Address document", icon: Landmark },
-                  { type: "Name Proof" as const, label: "Name proof", detail: "Identity document", icon: IdCard },
-                  { type: "Age Proof" as const, label: "Age proof", detail: "Birth or school record", icon: CalendarDays },
-                  { type: "Medical Self-Declaration" as const, label: "Medical declaration", detail: "Form 1 document", icon: FileText },
-                    ].map(({ type, label, detail, icon: Icon }) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setStandardDocumentType(type)}
-                        className={`flex min-h-20 items-start gap-2 rounded-xl border p-3 text-left transition-all ${standardDocumentType === type ? "border-[#167c74] bg-[#eaf4ef] ring-2 ring-[#167c74]/15" : "border-[#dce8e5] bg-white hover:border-[#8bbbab]"}`}
-                      >
-                        <Icon size={17} className={standardDocumentType === type ? "text-[#167c74]" : "text-[#71877e]"} />
-                        <span><strong className="block text-xs text-[#173b32]">{label}</strong><small className="mt-0.5 block text-[10px] text-[#687d75]">{detail}</small></span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-2 flex items-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">2</span><span className="text-xs font-bold text-[#405e54]">Choose file</span></div>
-                  <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#9fc8bc] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="min-w-0"><strong className="block truncate text-xs text-[#173b32]">{selectedWalletFile ? selectedWalletFile.name : "No document selected"}</strong><small className="block text-[11px] text-[#687d75]">PDF or image · maximum 10 MB</small></span>
-                    <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => fileInputRef.current?.click()}><Plus size={15} /> Choose file</Button>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-3 border-t border-[#e4efeb] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="m-0 text-[11px] text-[#687d75]">Uploading as <strong className="text-[#173b32]">{standardDocumentType}</strong></p>
-                  <Button type="button" disabled={!selectedWalletFile || walletUploading} className="gap-2" onClick={uploadStandardWalletFile}><Upload size={16} /> {walletUploading ? "Uploading…" : "Upload to wallet"}</Button>
-                </div>
-              </div>
-            </div>}
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="sr-only"
-              accept="application/pdf,image/*"
-              onChange={(event) => selectWalletFile(event.target.files?.[0] || null)}
-            />
-            {standardWalletNotice && <p className="mx-auto mt-4 max-w-lg rounded-xl border border-[#cfe3dd] bg-[#f2f8f6] px-4 py-3 text-xs font-medium leading-5 text-[#405e54]" role="status">{standardWalletNotice}</p>}
-            {uploadedWalletFiles.length > 0 && (
-              <div className="mx-auto mt-6 max-w-xl text-left">
-                <div className="mb-2 flex items-center justify-between gap-3"><h3 className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#587269]">Your uploaded documents</h3><span className="text-[11px] font-medium text-[#687d75]">Private to your account</span></div>
-                <div className="overflow-hidden rounded-2xl border border-[#d8e5e0] bg-white">
-                  {uploadedWalletFiles.map((file, index) => (
-                    <div key={file.$id} className={`px-4 py-3 ${index > 0 ? "border-t border-[#edf2ef]" : ""}`}>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]"><FileCheck2 size={17} /></span>
-                        <span className="min-w-0 flex-1"><strong className="block break-words text-xs text-[#173b32]">{file.name.replace(/^(Photo|Address Proof|Name Proof|Age Proof|Medical Self-Declaration) - /, "")}</strong><small className="mt-1 block text-[11px] text-[#687d75]">{file.mimeType || "Document"} · {Math.max(1, Math.round(file.sizeOriginal / 1024))} KB</small><span className="mt-2 inline-flex rounded-full bg-[#eaf4ef] px-2 py-0.5 text-[10px] font-bold text-[#0f7655]">{file.category}</span></span>
-                        <div className="flex w-full shrink-0 gap-2 sm:w-auto">
-                          <Button type="button" size="sm" variant="outline" className="flex-1 gap-1.5 sm:flex-none" onClick={() => viewWalletFile(file.$id)}><Eye size={14} /> View</Button>
-                          <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 sm:flex-none" onClick={() => setEditingWalletFile({ id: file.$id, name: file.name })}><FilePenLine size={14} /> Rename</Button>
-                          <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 text-red-700 hover:bg-red-50 hover:text-red-700 sm:flex-none" disabled={deletingWalletFile === file.$id} onClick={() => deleteStandardWalletFile(file.$id, file.name)}><Trash2 size={14} /> {deletingWalletFile === file.$id ? "Deleting…" : "Delete"}</Button>
-                        </div>
-                      </div>
-                      {editingWalletFile?.id === file.$id && (
-                        <form className="mt-3 flex flex-col gap-2 rounded-xl bg-[#f2f8f6] p-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); renameStandardWalletFile(); }}>
-                          <Input aria-label="Document name" value={editingWalletFile.name} onChange={(event) => setEditingWalletFile({ ...editingWalletFile, name: event.target.value })} className="h-9 bg-white text-xs" autoFocus />
-                          <div className="flex gap-2"><Button type="submit" size="sm" disabled={renamingWalletFile}>{renamingWalletFile ? "Saving…" : "Save name"}</Button><Button type="button" size="sm" variant="outline" onClick={() => setEditingWalletFile(null)}>Cancel</Button></div>
-                        </form>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
-        ) : <>
         {/* DigiLocker Status Bar */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Card className="flex items-center justify-between p-5 bg-[#edf7f4] border-[#cfe3dd]">
@@ -751,13 +660,13 @@ export function Wallet() {
         <div>
           <div className="mb-5 flex items-end justify-between border-b border-slate-100 pb-3">
             <div>
-              <h2 className="text-xl font-extrabold text-[#152321]">Verified Digital Credentials</h2>
+              <h2 className="text-lg font-bold text-[#152321] md:text-xl">Verified Digital Credentials</h2>
               <p className="text-xs text-[#5e6f68]">Issued by Ministry of Road Transport & Highways and UIDAI</p>
             </div>
-            <Badge variant="success">5 Documents Active</Badge>
+            <Badge variant="success">{defaultDocs.length} Documents Active</Badge>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {defaultDocs.map((doc) => (
               <Card
                 key={doc.type}
@@ -797,25 +706,25 @@ export function Wallet() {
                   <Button
                     size="sm"
                     className="flex-1 gap-1.5 text-xs"
-                    onClick={() => downloadWalletDocumentPdf(doc)}
+                    onClick={() => setPreview({ ...doc, mode: "view" })}
                   >
-                    <Download size={14} /> PDF
+                    <Eye size={13} /> View
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="gap-1 text-xs"
-                    onClick={() => setPreview({ ...doc, mode: "view" })}
+                    className="flex-1 gap-1.5 text-xs"
+                    onClick={() => setPreview({ ...doc, mode: "qr" })}
                   >
-                    View
+                    <QrCode size={13} /> QR Code
                   </Button>
                   <Button
                     size="sm"
-                    variant="secondary"
-                    className="gap-1 text-xs"
-                    onClick={() => setPreview({ ...doc, mode: "qr" })}
+                    variant="ghost"
+                    className="gap-1.5 px-2.5 text-xs"
+                    onClick={() => downloadWalletDocumentPdf(doc)}
                   >
-                    <QrCode size={13} /> QR
+                    <Download size={13} />
                   </Button>
                 </CardFooter>
               </Card>
@@ -823,7 +732,7 @@ export function Wallet() {
           </div>
         </div>
 
-        {/* User Added Documents (Appwrite / Local) */}
+        {/* Additional Linked Records */}
         {additionalDocuments.length > 0 && (
           <div>
             <h3 className="mb-4 text-base font-bold text-[#152321]">Your Additional Linked Records</h3>
@@ -847,11 +756,123 @@ export function Wallet() {
             </div>
           </div>
         )}
-        </>}
+
+        {/* Upload Private Document Section */}
+        <section className="rounded-2xl border border-[#cfe3dd] bg-[#fbfdfc] p-6 shadow-xs">
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-[#152321]">Upload Additional Supporting Document</h3>
+            <p className="text-xs text-[#5e6f68]">Attach PDF or image credentials directly to your local and Appwrite digital locker.</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">1</span>
+                <span className="text-xs font-bold text-[#405e54]">Document category</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { type: "Photo" as const, label: "Applicant photo", detail: "Clear face image", icon: UserCheck },
+                  { type: "Address Proof" as const, label: "Address proof", detail: "Address document", icon: Landmark },
+                  { type: "Name Proof" as const, label: "Name proof", detail: "Identity document", icon: IdCard },
+                  { type: "Age Proof" as const, label: "Age proof", detail: "Birth or school record", icon: CalendarDays },
+                  { type: "Medical Self-Declaration" as const, label: "Medical declaration", detail: "Form 1 document", icon: FileText },
+                ].map(({ type, label, detail, icon: Icon }) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setStandardDocumentType(type)}
+                    className={`flex min-h-16 items-start gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                      standardDocumentType === type ? "border-[#167c74] bg-[#eaf4ef] ring-2 ring-[#167c74]/15" : "border-[#dce8e5] bg-white hover:border-[#8bbbab]"
+                    }`}
+                  >
+                    <Icon size={16} className={standardDocumentType === type ? "text-[#167c74]" : "text-[#71877e]"} />
+                    <span>
+                      <strong className="block text-xs text-[#173b32]">{label}</strong>
+                      <small className="mt-0.5 block text-[10px] text-[#687d75]">{detail}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">2</span>
+                <span className="text-xs font-bold text-[#405e54]">Choose file</span>
+              </div>
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#9fc8bc] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="min-w-0">
+                  <strong className="block truncate text-xs text-[#173b32]">{selectedWalletFile ? selectedWalletFile.name : "No document selected"}</strong>
+                  <small className="block text-[11px] text-[#687d75]">PDF or image · maximum 10 MB</small>
+                </span>
+                <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => fileInputRef.current?.click()}>
+                  <Plus size={15} /> Choose file
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-[#e4efeb] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="m-0 text-[11px] text-[#687d75]">Uploading as <strong className="text-[#173b32]">{standardDocumentType}</strong></p>
+              <Button type="button" disabled={!selectedWalletFile || walletUploading} className="gap-2" onClick={uploadStandardWalletFile}>
+                <Upload size={16} /> {walletUploading ? "Uploading…" : "Upload to wallet"}
+              </Button>
+            </div>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="sr-only"
+            accept="application/pdf,image/*"
+            onChange={(event) => selectWalletFile(event.target.files?.[0] || null)}
+          />
+          {standardWalletNotice && (
+            <p className="mt-4 rounded-xl border border-[#cfe3dd] bg-[#f2f8f6] px-4 py-2.5 text-xs font-medium text-[#405e54]" role="status">
+              {standardWalletNotice}
+            </p>
+          )}
+
+          {uploadedWalletFiles.length > 0 && (
+            <div className="mt-6 text-left">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-[#587269]">Your uploaded documents</h4>
+                <span className="text-[11px] font-medium text-[#687d75]">Stored in your account</span>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-[#d8e5e0] bg-white">
+                {uploadedWalletFiles.map((file, index) => (
+                  <div key={file.$id} className={`px-4 py-3 ${index > 0 ? "border-t border-[#edf2ef]" : ""}`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]"><FileCheck2 size={17} /></span>
+                      <span className="min-w-0 flex-1">
+                        <strong className="block break-words text-xs text-[#173b32]">{file.name.replace(/^(Photo|Address Proof|Name Proof|Age Proof|Medical Self-Declaration) - /, "")}</strong>
+                        <small className="mt-0.5 block text-[11px] text-[#687d75]">{file.mimeType || "Document"} · {Math.max(1, Math.round(file.sizeOriginal / 1024))} KB</small>
+                        <span className="mt-1.5 inline-flex rounded-full bg-[#eaf4ef] px-2 py-0.5 text-[10px] font-bold text-[#0f7655]">{file.category}</span>
+                      </span>
+                      <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+                        <Button type="button" size="sm" variant="outline" className="flex-1 gap-1.5 sm:flex-none" onClick={() => viewWalletFile(file.$id)}><Eye size={14} /> View</Button>
+                        <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 sm:flex-none" onClick={() => setEditingWalletFile({ id: file.$id, name: file.name })}><FilePenLine size={14} /> Rename</Button>
+                        <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 text-red-700 hover:bg-red-50 hover:text-red-700 sm:flex-none" disabled={deletingWalletFile === file.$id} onClick={() => deleteStandardWalletFile(file.$id, file.name)}><Trash2 size={14} /> {deletingWalletFile === file.$id ? "Deleting…" : "Delete"}</Button>
+                      </div>
+                    </div>
+                    {editingWalletFile?.id === file.$id && (
+                      <form className="mt-3 flex flex-col gap-2 rounded-xl bg-[#f2f8f6] p-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); renameStandardWalletFile(); }}>
+                        <Input aria-label="Document name" value={editingWalletFile.name} onChange={(event) => setEditingWalletFile({ ...editingWalletFile, name: event.target.value })} className="h-9 bg-white text-xs" autoFocus />
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" disabled={renamingWalletFile}>{renamingWalletFile ? "Saving…" : "Save name"}</Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => setEditingWalletFile(null)}>Cancel</Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Add Document Dialog Modal */}
-      {demoMode && documentType && (
+      {documentType && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs">
           <Card className="w-full max-w-md p-6">
             <CardHeader className="p-0 pb-4">
@@ -892,7 +913,7 @@ export function Wallet() {
       )}
 
       {/* Document Details & QR Modal */}
-      {demoMode && preview && (
+      {preview && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs"
           onClick={() => setPreview(null)}
@@ -938,12 +959,17 @@ export function Wallet() {
                   <span className="rounded-md bg-white px-3 py-1.5 text-xs font-black text-[#152321] shadow-xs">
                     {preview.number}
                   </span>
+                  <p className="mt-2 text-[10px] font-bold text-[#167c74]">
+                    Parivahan / UIDAI Sealed
+                  </p>
                 </div>
-                <Badge variant="success">✓ Digitally Signed & Sealed</Badge>
+                <p className="text-[11px] text-[#5e6f68]">
+                  Scan using official police mParivahan or DigiLocker scanner to verify cryptographic signature.
+                </p>
               </CardContent>
             )}
 
-            <CardFooter className="flex gap-2 p-0 pt-4">
+            <CardFooter className="flex gap-2 p-0 pt-4 border-t border-slate-100">
               <Button
                 className="flex-1 gap-1.5"
                 onClick={() => downloadWalletDocumentPdf(preview)}
