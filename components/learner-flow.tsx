@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "./safe-link";
-import { useLanguage } from "./language-provider";
+import { translateText, useLanguage } from "./language-provider";
 import { useDemoMode } from "./demo-mode-provider";
 import { useRouter } from "next/navigation";
 import { PageShell } from "./page-shell";
@@ -489,7 +489,7 @@ export function LearnerFlow() {
             {error && (
               <div className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-700 border border-red-200">
                 <AlertTriangle size={16} />
-                <span>{error}</span>
+                <span>{translateText(error, language)}</span>
               </div>
             )}
 

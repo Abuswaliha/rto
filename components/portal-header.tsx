@@ -16,11 +16,14 @@ import {
   Gavel,
   Home,
   Search,
+  CalendarDays,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { hasSession } from "@/lib/storage";
 import { usePathname } from "next/navigation";
-import { LanguageSwitcher } from "./language-provider";
+import { LanguageSwitcher, translateText, useLanguage } from "./language-provider";
 import { useDemoMode } from "./demo-mode-provider";
 import {
   TopNavAccessibilityControls,
@@ -33,16 +36,31 @@ export function PortalHeader() {
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [accessibilityModalOpen, setAccessibilityModalOpen] = useState(false);
   const [demoPopoverOpen, setDemoPopoverOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLElement>(null);
+  const shouldRestoreMenuFocus = useRef(false);
   const { enabled: demoMode, setEnabled: setDemoMode } = useDemoMode();
+  const { language } = useLanguage();
   const pathname = usePathname();
+  const t = (value: string) => translateText(value, language);
 
   const isCurrent = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 
-  const navLinkClass = (href: string) =>
+  const desktopNavLinkClass = (href: string) =>
     `relative py-6 text-sm font-semibold transition-colors hover:text-[#167c74] ${
       isCurrent(href) ? "font-bold text-[#167c74]" : "text-[#263a33]"
     }`;
+
+  const openMenu = useCallback(() => {
+    shouldRestoreMenuFocus.current = false;
+    setMenu(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    shouldRestoreMenuFocus.current = true;
+    setMenu(false);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setSignedIn(hasSession()), 0);
@@ -51,19 +69,55 @@ export function PortalHeader() {
 
   useEffect(() => {
     if (!menu) return;
+    const menuButton = menuButtonRef.current;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenu(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+      }
     };
 
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+
+      const focusableElements = mobileMenuRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusableElements?.length) return;
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    // Lock body scroll when mobile menu is open
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [menu]);
+    document.addEventListener("keydown", trapFocus);
+    mobileMenuRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("keydown", trapFocus);
+      if (shouldRestoreMenuFocus.current) {
+        menuButton?.focus();
+        shouldRestoreMenuFocus.current = false;
+      }
+    };
+  }, [closeMenu, menu]);
 
   return (
     <>
-      {/* Top Accessibility & Demo Banner */}
-      <div className="flex min-h-[34px] items-center justify-between bg-[#152923] px-4 text-center text-xs tracking-wider text-white md:px-8 lg:px-12">
+      {/* Top Accessibility & Demo Utility Strip (Desktop only) */}
+      <div className="hidden min-h-[34px] items-center justify-between bg-[#152923] px-4 text-center text-xs tracking-wider text-white md:flex md:px-8 lg:px-12">
         <div className="relative flex items-center gap-2 text-[11px] text-white/80">
           <button
             type="button"
@@ -113,13 +167,13 @@ export function PortalHeader() {
             </div>
           )}
         </div>
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="flex items-center gap-3">
           <TopNavAccessibilityControls />
         </div>
       </div>
 
       {/* Main Header Bar */}
-      <header className="sticky top-0 z-40 flex h-16 sm:h-[78px] w-full items-center justify-between border-b border-[#dce8e5] bg-white/95 px-3 xs:px-4 backdrop-blur-md md:px-8 lg:px-12">
+      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-[#dce8e5] bg-white/95 px-4 backdrop-blur-md sm:h-[76px] md:px-8 lg:px-12">
         {/* Official Brand Logo */}
         <Link href="/" className="flex shrink-0 items-center no-underline group py-1" aria-label="Smart RTO home">
           <Image
@@ -127,24 +181,26 @@ export function PortalHeader() {
             alt="Smart RTO - Services simplified"
             width={200}
             height={60}
-            className="h-9 xs:h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-102"
+            className="h-9 w-auto object-contain transition-transform group-hover:scale-102 sm:h-11"
             priority
           />
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* ========================================================================= */}
+        {/* DESKTOP NAVIGATION (Hidden on Mobile, Visible on md:)                     */}
+        {/* ========================================================================= */}
         <nav
-          className="ml-auto hidden items-center gap-8 md:flex"
-          aria-label="Main navigation"
+          className="ml-auto hidden items-center gap-7 lg:gap-8 md:flex"
+          aria-label="Desktop navigation"
         >
-          <Link className={navLinkClass("/dashboard")} href="/dashboard">
+          <Link className={desktopNavLinkClass("/dashboard")} href="/dashboard">
             Dashboard
             {isCurrent("/dashboard") && (
               <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
             )}
           </Link>
 
-          {/* Services Dropdown */}
+          {/* Services Dropdown Mega-Menu */}
           <div
             className="relative py-6"
             onMouseEnter={() => setServicesDropdownOpen(true)}
@@ -185,7 +241,7 @@ export function PortalHeader() {
                     </div>
                     <div>
                       <strong className="block text-xs text-[#152321] group-hover:text-[#167c74]">
-                        Learner Licence
+                        {t("Learner Licence")}
                       </strong>
                       <span className="text-[11px] text-[#5e6f68]">Form 2 application & test</span>
                     </div>
@@ -201,7 +257,7 @@ export function PortalHeader() {
                     </div>
                     <div>
                       <strong className="block text-xs text-[#152321] group-hover:text-[#167c74]">
-                        Permanent Driving Licence
+                        {t("Permanent Driving Licence")}
                       </strong>
                       <span className="text-[11px] text-[#5e6f68]">Form 4 DL application</span>
                     </div>
@@ -217,7 +273,7 @@ export function PortalHeader() {
                     </div>
                     <div>
                       <strong className="block text-xs text-[#152321] group-hover:text-[#167c74]">
-                        Vehicle Transfer Service
+                        {t("Vehicle Transfer Service")}
                       </strong>
                       <span className="text-[11px] text-[#5e6f68]">Form 29 & 30 online application</span>
                     </div>
@@ -233,7 +289,7 @@ export function PortalHeader() {
                     </div>
                     <div>
                       <strong className="block text-xs text-[#152321] group-hover:text-[#167c74]">
-                        Vehicle RC Search
+                        {t("Vehicle RC Search")}
                       </strong>
                       <span className="text-[11px] text-[#5e6f68]">Inspect fitness & digital RC</span>
                     </div>
@@ -249,7 +305,7 @@ export function PortalHeader() {
                     </div>
                     <div>
                       <strong className="block text-xs text-[#152321] group-hover:text-[#167c74]">
-                        eChallan Payment
+                        {t("eChallan Payment")}
                       </strong>
                       <span className="text-[11px] text-[#5e6f68]">Check & pay traffic fines</span>
                     </div>
@@ -265,7 +321,7 @@ export function PortalHeader() {
                     </div>
                     <div>
                       <strong className="block text-xs text-[#152321] group-hover:text-[#167c74]">
-                        Grievance Redressal
+                        {t("Grievance Redressal")}
                       </strong>
                       <span className="text-[11px] text-[#5e6f68]">Raise service issues</span>
                     </div>
@@ -285,25 +341,25 @@ export function PortalHeader() {
             )}
           </div>
 
-          <Link className={navLinkClass("/track")} href="/track">
+          <Link className={desktopNavLinkClass("/track")} href="/track">
             Applications
             {isCurrent("/track") && (
               <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
             )}
           </Link>
-          <Link className={navLinkClass("/appointments")} href="/appointments">
+          <Link className={desktopNavLinkClass("/appointments")} href="/appointments">
             Appointments
             {isCurrent("/appointments") && (
               <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
             )}
           </Link>
-          <Link className={navLinkClass("/wallet")} href="/wallet">
+          <Link className={desktopNavLinkClass("/wallet")} href="/wallet">
             Wallet
             {isCurrent("/wallet") && (
               <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
             )}
           </Link>
-          <Link className={navLinkClass("/contact")} href="/contact">
+          <Link className={desktopNavLinkClass("/contact")} href="/contact">
             Contact
             {isCurrent("/contact") && (
               <span className="absolute bottom-4 left-0 right-0 h-0.5 rounded-full bg-[#167c74]" />
@@ -311,11 +367,14 @@ export function PortalHeader() {
           </Link>
         </nav>
 
-        {/* Right Tools Toolbar */}
-        <div className="flex shrink-0 items-center gap-1.5 pl-2 sm:gap-2.5 sm:pl-6">
-          <div className="hidden sm:block">
+        {/* Right Tools Toolbar (Language, Accessibility, Wallet & Profile) */}
+        <div className="flex shrink-0 items-center gap-2 pl-2 sm:gap-3 sm:pl-6">
+          {/* Direct Language Switcher: Always visible on both desktop & mobile top header */}
+          <div className="flex items-center">
             <LanguageSwitcher compact />
           </div>
+
+          {/* Accessibility Settings Trigger */}
           <button
             type="button"
             onClick={() => setAccessibilityModalOpen(true)}
@@ -326,42 +385,46 @@ export function PortalHeader() {
             <Accessibility size={18} />
           </button>
 
-          {signedIn ? (
-            <>
+          {/* Desktop User Profile / Sign in */}
+          <div className="hidden md:flex items-center gap-2">
+            {signedIn ? (
+              <>
+                <Link
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74] sm:h-10 sm:w-10"
+                  href="/wallet"
+                  aria-label="Document Wallet"
+                  title="Document Wallet"
+                >
+                  <WalletCards size={18} />
+                </Link>
+                <Link
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#167c74] text-xs font-extrabold text-white shadow-sm ring-2 ring-white transition-transform hover:scale-105"
+                  href="/profile"
+                  aria-label="Demo Citizen profile"
+                >
+                  DC
+                </Link>
+              </>
+            ) : (
               <Link
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74] sm:h-10 sm:w-10"
-                href="/wallet"
-                aria-label="Document Wallet"
-                title="Document Wallet"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-[#167c74] bg-white px-3.5 text-xs font-bold text-[#167c74] transition-all hover:bg-[#167c74] hover:text-white"
+                href="/login"
               >
-                <WalletCards size={18} />
+                Sign in
               </Link>
-              <Link
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#167c74] text-xs font-extrabold text-white shadow-sm ring-2 ring-white transition-transform hover:scale-105 sm:h-10 sm:w-10"
-                href="/profile"
-                aria-label="Demo Citizen profile"
-              >
-                DC
-              </Link>
-            </>
-          ) : (
-            <Link
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-[#167c74] bg-white px-3 text-xs font-bold text-[#167c74] transition-all hover:bg-[#167c74] hover:text-white sm:h-10 sm:px-4"
-              href="/login"
-            >
-              Sign in
-            </Link>
-          )}
+            )}
+          </div>
 
-          {/* Mobile Menu Trigger */}
+          {/* Mobile Menu Hamburger Button */}
           <button
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#152321] hover:bg-[#ddf3ef] sm:h-10 sm:w-10 md:hidden"
-            onClick={() => setMenu((v) => !v)}
+            ref={menuButtonRef}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#d8e5e0] bg-[#f7fbfa] text-[#152321] hover:bg-[#ddf3ef] hover:text-[#167c74] transition-all sm:h-10 sm:w-10 md:hidden"
+            onClick={() => (menu ? closeMenu() : openMenu())}
             aria-expanded={menu}
             aria-controls="mobile-navigation"
             aria-label="Toggle navigation menu"
           >
-            {menu ? <X size={20} /> : <Menu size={20} />}
+            {menu ? <X size={20} className="rotate-90 transition-transform" /> : <Menu size={20} />}
           </button>
         </div>
       </header>
@@ -372,79 +435,134 @@ export function PortalHeader() {
         onClose={() => setAccessibilityModalOpen(false)}
       />
 
-      {/* Mobile Dropdown Menu Drawer */}
+      {/* ========================================================================= */}
+      {/* MOBILE NAVIGATION DRAWER (Distinct, touch-first, mobile app styled)      */}
+      {/* ========================================================================= */}
       {menu && (
         <>
           <button
             type="button"
-            className="fixed inset-x-0 bottom-0 top-[112px] z-30 bg-[#10241e]/30 backdrop-blur-[1px] md:hidden"
-            onClick={() => setMenu(false)}
+            className="fixed inset-0 top-16 z-40 bg-[#10241e]/50 backdrop-blur-xs md:hidden animate-in fade-in-50"
+            onClick={closeMenu}
             aria-label="Close navigation menu"
+            tabIndex={-1}
           />
           <aside
             id="mobile-navigation"
-            className="fixed inset-x-0 bottom-0 top-[112px] z-30 overflow-y-auto border-t border-[#dce8e5] bg-[#fbfcfa] px-4 py-5 shadow-2xl animate-in slide-in-from-top-3 duration-200 md:hidden"
+            ref={mobileMenuRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation menu"
+            tabIndex={-1}
+            className="fixed inset-x-0 bottom-0 top-16 z-50 overflow-y-auto border-t border-[#dce8e5] bg-[#fbfcfa] p-4 pb-24 shadow-2xl animate-in slide-in-from-top-4 duration-200 md:hidden"
           >
-            <div className="mx-auto max-w-md">
-              <div className="mb-5 flex items-center justify-between rounded-2xl border border-[#cfe3dd] bg-[#eaf4ef] px-4 py-3">
-                <div>
-                  <p className="m-0 text-xs font-extrabold text-[#173b32]">Citizen portal</p>
-                  <p className="mt-0.5 text-[11px] font-medium text-[#587269]">Choose a service or check your progress.</p>
+            <div className="mx-auto max-w-md space-y-5">
+              {/* Mobile Citizen Account Card */}
+              {signedIn ? (
+                <div className="flex items-center justify-between rounded-2xl border border-[#cfe3dd] bg-gradient-to-r from-[#eaf4ef] to-[#f2f8f6] p-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#167c74] font-extrabold text-white">
+                      DC
+                    </div>
+                    <div>
+                      <strong className="block text-sm font-extrabold text-[#152321]">
+                        Demo Citizen
+                      </strong>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0d5c45]">
+                        <ShieldCheck size={13} /> Active Account
+                      </span>
+                    </div>
+                  </div>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMenu(false)}
+                    className="rounded-xl border border-[#167c74] bg-white px-3 py-1.5 text-xs font-bold text-[#167c74] shadow-2xs hover:bg-[#167c74] hover:text-white transition-colors"
+                  >
+                    Manage Account
+                  </Link>
                 </div>
-                <LanguageSwitcher compact />
+              ) : (
+                <div className="rounded-2xl border border-[#cfe3dd] bg-gradient-to-br from-[#167c74] to-[#0f5b55] p-4 text-white shadow-sm">
+                  <strong className="block text-sm font-extrabold">Sign in to Smart RTO</strong>
+                  <p className="mt-1 text-xs text-white/80 leading-relaxed">
+                    Access saved applications & sync across devices
+                  </p>
+                  <Link
+                    href="/login"
+                    onClick={() => setMenu(false)}
+                    className="button secondary mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 border-0 bg-white px-4 text-sm font-bold !text-[#167c74] shadow-xs transition-colors hover:bg-[#ddf3ef] hover:!text-[#167c74]"
+                  >
+                    Sign in <ArrowRight size={14} />
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile Quick Action Tiles (4-grid) */}
+              <div>
+                <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#587269] mb-2 px-1">
+                  Quick Actions
+                </span>
+                <nav className="grid grid-cols-2 gap-2.5" aria-label={t("Mobile quick navigation")}>
+                  {[
+                    { href: "/dashboard", label: t("Dashboard"), icon: Home },
+                    { href: "/track", label: t("Applications"), icon: Search },
+                    { href: "/appointments", label: t("Appointments"), icon: CalendarDays },
+                    { href: "/wallet", label: t("Digital Wallet"), icon: WalletCards },
+                  ].map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMenu(false)}
+                      className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition-all ${
+                        isCurrent(href)
+                          ? "border-[#167c74] bg-[#167c74] text-white shadow-sm"
+                          : "border-[#d8e5e0] bg-white text-[#173b32] hover:border-[#167c74] hover:bg-[#f2f8f6]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Icon size={20} aria-hidden="true" />
+                        {isCurrent(href) && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <span className="mt-3 text-xs font-extrabold">{label}</span>
+                    </Link>
+                  ))}
+                </nav>
               </div>
 
-              <nav className="grid grid-cols-2 gap-2" aria-label="Mobile navigation">
-                {[
-                  { href: "/dashboard", label: "Dashboard", icon: Home },
-                  { href: "/services", label: "Services", icon: FileText },
-                  { href: "/track", label: "Applications", icon: Search },
-                  { href: "/wallet", label: "Wallet", icon: WalletCards },
-                ].map(({ href, label, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setMenu(false)}
-                    className={`flex min-h-20 flex-col justify-between rounded-2xl border p-3 text-left transition-colors ${
-                      isCurrent(href)
-                        ? "border-[#167c74] bg-[#167c74] text-white shadow-sm"
-                        : "border-[#d8e5e0] bg-white text-[#173b32] hover:border-[#167c74] hover:bg-[#f2f8f6]"
-                    }`}
-                  >
-                    <Icon size={19} aria-hidden="true" />
-                    <span className="text-xs font-extrabold">{label}</span>
-                  </Link>
-                ))}
-              </nav>
-
-              <section className="mt-6" aria-labelledby="mobile-services-title">
+              {/* Mobile Popular Services List */}
+              <section aria-labelledby="mobile-services-title">
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <h2 id="mobile-services-title" className="m-0 text-xs font-extrabold uppercase tracking-[0.14em] text-[#587269]">
-                    Start a service
+                  <h2 id="mobile-services-title" className="m-0 text-[11px] font-extrabold uppercase tracking-wider text-[#587269]">
+                    {t("Popular Services")}
                   </h2>
-                  <Link href="/services" onClick={() => setMenu(false)} className="text-xs font-bold text-[#167c74]">
-                    View all
+                  <Link href="/services" onClick={() => setMenu(false)} className="text-xs font-bold text-[#167c74] hover:underline">
+                    {t("View all")}
                   </Link>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-[#d8e5e0] bg-white">
+                <div className="overflow-hidden rounded-2xl border border-[#d8e5e0] bg-white shadow-2xs">
                   {[
-                    { href: "/apply/learner-licence", label: "Learner Licence", detail: "Form 2 application", icon: FileText },
-                    { href: "/apply/permanent-licence", label: "Permanent Driving Licence", detail: "Form 4 application", icon: IdCard },
-                    { href: "/vehicles/transfer", label: "Vehicle transfer", detail: "Form 29 & 30", icon: Car },
-                    { href: "/challans", label: "eChallan payment", detail: "Check traffic fines", icon: WalletCards },
-                    { href: "/wallet", label: "Document wallet", detail: "Upload and manage documents", icon: WalletCards },
+                    { href: "/apply/learner-licence", label: t("Learner Licence"), detail: t("Form 2 application & test"), icon: FileText },
+                    { href: "/apply/permanent-licence", label: t("Permanent Driving Licence"), detail: t("Form 4 DL application"), icon: IdCard },
+                    { href: "/vehicles/transfer", label: t("Vehicle Transfer Service"), detail: t("Form 29 & 30 online application"), icon: Car },
+                    { href: "/vehicles/search", label: t("Vehicle RC Search"), detail: t("Inspect fitness & digital RC"), icon: Search },
+                    { href: "/challans", label: t("eChallan Payment"), detail: t("Check & pay traffic fines"), icon: WalletCards },
+                    { href: "/grievance", label: t("Grievance Redressal"), detail: t("Raise service issues"), icon: Gavel },
                   ].map(({ href, label, detail, icon: Icon }, index) => (
                     <Link
                       key={href}
                       href={href}
                       onClick={() => setMenu(false)}
-                      className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#f2f8f6] ${index > 0 ? "border-t border-[#edf2ef]" : ""}`}
+                      className={`flex items-center gap-3 px-3.5 py-3 transition-colors hover:bg-[#f2f8f6] ${
+                        index > 0 ? "border-t border-[#edf2ef]" : ""
+                      }`}
                     >
-                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]">
                         <Icon size={17} aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <strong className="block text-xs text-[#173b32]">{label}</strong>
+                        <strong className="block text-xs font-bold text-[#173b32]">{label}</strong>
                         <small className="block text-[11px] text-[#687d75]">{detail}</small>
                       </span>
                       <ChevronDown className="-rotate-90 text-[#7f938b]" size={16} aria-hidden="true" />
@@ -453,17 +571,48 @@ export function PortalHeader() {
                 </div>
               </section>
 
-              <Link
-                onClick={() => setMenu(false)}
-                className="mt-5 flex items-center justify-between rounded-2xl bg-[#173b32] px-4 py-3.5 text-white"
-                href={signedIn ? "/profile" : "/login"}
-              >
-                <span>
-                  <strong className="block text-sm">{signedIn ? "Your profile" : "Sign in to continue"}</strong>
-                  <small className="text-xs text-white/75">{signedIn ? "Manage your demo account" : "Access saved applications"}</small>
-                </span>
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
+              {/* Mobile Demo Mode Toggle & Quick Settings */}
+              <div className="rounded-2xl border border-[#cfe3dd] bg-white p-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#167c74]" />
+                    <span className="text-xs font-bold text-[#152321]">Demo mode</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDemoMode(!demoMode)}
+                    className={`flex h-6 w-11 items-center rounded-full p-1 transition-colors ${
+                      demoMode ? "bg-[#167c74]" : "bg-slate-300"
+                    }`}
+                    aria-label="Toggle Demo Mode"
+                  >
+                    <div
+                      className={`h-4 w-4 rounded-full bg-white shadow-md transition-transform ${
+                        demoMode ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Support & Policy Links */}
+              <div className="flex flex-wrap items-center justify-between gap-3 px-2 pt-1 text-xs font-semibold text-[#5e6f68]">
+                <Link href="/about" onClick={() => setMenu(false)} className="hover:text-[#167c74]">
+                  About
+                </Link>
+                <Link href="/how-it-works" onClick={() => setMenu(false)} className="hover:text-[#167c74]">
+                  How it Works
+                </Link>
+                <Link href="/contact" onClick={() => setMenu(false)} className="hover:text-[#167c74]">
+                  Contact Us
+                </Link>
+                <Link href="/privacy" onClick={() => setMenu(false)} className="hover:text-[#167c74]">
+                  Privacy
+                </Link>
+                <Link href="/security" onClick={() => setMenu(false)} className="hover:text-[#167c74]">
+                  Security
+                </Link>
+              </div>
             </div>
           </aside>
         </>

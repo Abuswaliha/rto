@@ -139,36 +139,43 @@ const I18N_PROMPTS: Record<LanguageCode, QuickPrompt[]> = {
   ],
 };
 
-function extractContextualActions(text: string): ChatAction[] {
-  const lower = text.toLowerCase();
-  const actions: ChatAction[] = [];
+function extractContextualActions(query: string, reply: string): ChatAction[] {
+  const findAction = (text: string): ChatAction | undefined => {
+    const lower = text.toLowerCase();
 
-  if (lower.includes("learner") || lower.includes("form 2") || lower.includes("/apply/learner-licence") || lower.includes("लर्नर")) {
-    actions.push({ label: "Apply Learner Licence", href: "/apply/learner-licence", icon: FileText });
-  }
-  if (lower.includes("permanent") || lower.includes("form 4") || lower.includes("/apply/permanent-licence") || lower.includes("पक्का") || lower.includes("स्थायी")) {
-    actions.push({ label: "Apply Permanent DL", href: "/apply/permanent-licence", icon: IdCard });
-  }
-  if (lower.includes("transfer") || lower.includes("form 29") || lower.includes("form 30") || lower.includes("/vehicles/transfer") || lower.includes("ट्रांसफर")) {
-    actions.push({ label: "Vehicle Transfer", href: "/vehicles/transfer", icon: Car });
-  }
-  if (lower.includes("search") || lower.includes("rc search") || lower.includes("/vehicles/search")) {
-    actions.push({ label: "Search RC", href: "/vehicles/search", icon: Search });
-  }
-  if (lower.includes("wallet") || lower.includes("document") || lower.includes("upload") || lower.includes("/wallet") || lower.includes("वॉलेट")) {
-    actions.push({ label: "Open Wallet", href: "/wallet", icon: WalletCards });
-  }
-  if (lower.includes("track") || lower.includes("status") || lower.includes("srto-") || lower.includes("/track") || lower.includes("ट्रैक")) {
-    actions.push({ label: "Track Status", href: "/track", icon: Search });
-  }
-  if (lower.includes("appointment") || lower.includes("slot") || lower.includes("visit") || lower.includes("/appointments") || lower.includes("अपॉइंटमेंट")) {
-    actions.push({ label: "Book Slot", href: "/appointments", icon: CalendarDays });
-  }
-  if (lower.includes("challan") || lower.includes("fine") || lower.includes("/challans") || lower.includes("चालान")) {
-    actions.push({ label: "Pay Challan", href: "/challans", icon: WalletCards });
-  }
+    // Check specific services before prerequisites mentioned in the AI response.
+    if (lower.includes("permanent") || lower.includes("form 4") || lower.includes("/apply/permanent-licence") || lower.includes("पक्का") || lower.includes("स्थायी")) {
+      return { label: "Apply Permanent DL", href: "/apply/permanent-licence", icon: IdCard };
+    }
+    if (lower.includes("learner") || lower.includes("form 2") || lower.includes("/apply/learner-licence") || lower.includes("लर्नर")) {
+      return { label: "Apply Learner Licence", href: "/apply/learner-licence", icon: FileText };
+    }
+    if (lower.includes("transfer") || lower.includes("form 29") || lower.includes("form 30") || lower.includes("/vehicles/transfer") || lower.includes("ट्रांसफर")) {
+      return { label: "Vehicle Transfer", href: "/vehicles/transfer", icon: Car };
+    }
+    if (lower.includes("rc") || lower.includes("registration") || lower.includes("vehicle number") || lower.includes("/vehicles/search")) {
+      return { label: "Search RC", href: "/vehicles/search", icon: Search };
+    }
+    if (lower.includes("challan") || lower.includes("fine") || lower.includes("/challans") || lower.includes("चालान")) {
+      return { label: "Pay Challan", href: "/challans", icon: WalletCards };
+    }
+    if (lower.includes("grievance") || lower.includes("complaint") || lower.includes("issue") || lower.includes("/grievance")) {
+      return { label: "Raise a Grievance", href: "/grievance", icon: HelpCircle };
+    }
+    if (lower.includes("wallet") || lower.includes("/wallet") || lower.includes("वॉलेट")) {
+      return { label: "Open Wallet", href: "/wallet", icon: WalletCards };
+    }
+    if (lower.includes("track") || lower.includes("application status") || lower.includes("srto-") || lower.includes("/track") || lower.includes("ट्रैक")) {
+      return { label: "Track Status", href: "/track", icon: Search };
+    }
+    if (lower.includes("appointment") || lower.includes("slot") || lower.includes("/appointments") || lower.includes("अपॉइंटमेंट")) {
+      return { label: "Book Slot", href: "/appointments", icon: CalendarDays };
+    }
+  };
 
-  return actions.slice(0, 2);
+  // The question is the reliable signal; only use the reply when no service was requested.
+  const action = findAction(query) || findAction(reply);
+  return action ? [action] : [];
 }
 
 export function RtoChatBot() {
@@ -266,7 +273,7 @@ export function RtoChatBot() {
       if (res.ok) {
         const data = await res.json();
         const replyText = data.reply || "";
-        const actions = extractContextualActions(replyText + " " + text);
+        const actions = extractContextualActions(text, replyText);
 
         const botMessage: MessageItem = {
           id: `msg-${Date.now()}-bot`,
