@@ -29,7 +29,7 @@ import {
 import { PageShell } from "./page-shell";
 import { useDemoMode } from "./demo-mode-provider";
 import { appointmentParts } from "@/lib/appointment";
-import { DemoApplication, loadApplication, loadDraft, saveApplication, saveDraft } from "@/lib/storage";
+import { DemoApplication, loadApplication, loadDraft, saveApplication, saveDraft, hasSession } from "@/lib/storage";
 import { downloadAppointmentPdf, downloadApplicationPdf, downloadWalletDocumentPdf } from "@/lib/demo-pdf";
 import {
   isAppwriteConfigured,
