@@ -151,8 +151,33 @@ function getShortFallbackReply(rawQuery: string): { text: string; actions?: Chat
     };
   }
 
+  // Off-topic or non-RTO questions
+  const isOffTopic =
+    query.includes("who is") ||
+    query.includes("elon") ||
+    query.includes("musk") ||
+    query.includes("weather") ||
+    query.includes("movie") ||
+    query.includes("song") ||
+    query.includes("capital of") ||
+    query.includes("president") ||
+    query.includes("sports") ||
+    query.includes("cricket");
+
+  if (isOffTopic) {
+    return {
+      text: `I am specialized exclusively in **Smart RTO & Transport Services**.\n• Please ask questions about Driving Licences, Vehicle Transfers, Documents, or Slot Booking.`,
+      actions: [
+        { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
+        { label: "Vehicle Transfer", href: "/vehicles/transfer", icon: Car },
+        { label: "Document Wallet", href: "/wallet", icon: WalletCards },
+      ],
+      tags: ["RTO Only"],
+    };
+  }
+
   return {
-    text: `**Smart RTO Assistant (Short Guide):**\n• **Licences:** Form 2 (Learner) & Form 4 (Permanent DL).\n• **Vehicles:** Form 29/30 (Transfer) & RC Search.\n• **Tools:** Document Wallet & Live Application Tracking.`,
+    text: `**Smart RTO Assistant:**\n• **Licences:** Form 2 (Learner) & Form 4 (Permanent DL).\n• **Vehicles:** Form 29/30 (Transfer) & RC Search.\n• **Tools:** Document Wallet & Live Application Tracking.`,
     actions: [
       { label: "Learner Licence", href: "/apply/learner-licence", icon: FileText },
       { label: "Document Wallet", href: "/wallet", icon: WalletCards },

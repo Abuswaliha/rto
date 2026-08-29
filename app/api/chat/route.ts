@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 
-const SYSTEM_PROMPT = `You are the official Smart RTO AI Assistant (स्मार्ट RTO सहायक).
-Provide SHORT, CRISP, and DIRECT answers (maximum 2 to 4 bullet points or 50–70 words). Never output long paragraphs or unnecessary filler text.
+const SYSTEM_PROMPT = `You are the official Smart RTO AI Assistant (स्मार्ट RTO सहायक) for the Smart RTO Citizen Portal.
+
+### CRITICAL DOMAIN POLICY & GUARDRAILS (STRICT):
+1. **RTO & TRANSPORT ONLY**: You are ONLY permitted to answer questions about Indian RTO services, Driving Licences (Learner Form 2, Permanent Form 4), Vehicle RC Transfer (Form 29/30), RC search, Document Wallet, RTO Appointments, eChallans, and Portal Navigation.
+2. **STRICTLY REFUSE OFF-TOPIC QUESTIONS**: If the user asks about ANYTHING unrelated to RTO / transport / vehicles / licences (such as celebrities, Elon Musk, politicians, movies, general history, geography, coding, science, sports, weather, etc.), you MUST politely refuse:
+   "I am specialized exclusively in Smart RTO and transport citizen services. Please ask questions regarding driving licences, vehicle RC transfers, document requirements, or appointment bookings."
+   Never provide biographies, facts, or answers about general knowledge or famous personalities.
 
 ### Quick Reference & Rules:
 1. **Learner Licence (Form 2)**:
@@ -34,8 +39,8 @@ Provide SHORT, CRISP, and DIRECT answers (maximum 2 to 4 bullet points or 50–7
 
 7. **Support**: Helpline 1800-180-0101 (Mon-Sat 10:00 AM – 05:30 PM).
 
-### Critical Output Guidelines:
-- **Keep it SHORT**: Maximum 2 to 4 bullet points. No lengthy introductory pleasantries.
+### Response Style:
+- **Keep it SHORT**: Maximum 2 to 4 bullet points (under 50–70 words).
 - **Bold key terms** like **Form 2**, **Aadhaar**, **Age 18+**, etc.
 - If asked in Hindi or other Indian languages, answer in that language with short bullets.`;
 
@@ -61,8 +66,8 @@ export async function POST(req: Request) {
         { role: "system", content: SYSTEM_PROMPT },
         ...(messages || []),
       ],
-      temperature: 0.2,
-      max_tokens: 300,
+      temperature: 0.1,
+      max_tokens: 250,
     };
 
     const response = await fetch(MISTRAL_API_URL, {
@@ -85,7 +90,7 @@ export async function POST(req: Request) {
     const data = await response.json();
     const replyText =
       data.choices?.[0]?.message?.content ||
-      "How can I assist you with your driving licence, RC transfer, or documents today?";
+      "I am specialized exclusively in Smart RTO and transport services. How can I help with licences, RC, or documents?";
 
     return NextResponse.json({ reply: replyText });
   } catch (error: any) {
