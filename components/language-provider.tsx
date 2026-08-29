@@ -1421,17 +1421,18 @@ const translatedAttributes = ["aria-label", "placeholder", "title", "alt"] as co
 const dynamicLabels: Record<Exclude<LanguageCode, "en">, {
   services: [string, string]; lastUpdated: string; lastSaved: string; complete: string;
   step: (current: string, total: string, rest: string) => string; minutesLeft: (minutes: string) => string;
+  welcome: (name: string) => string;
 }> = {
-  hi: { services: ["सेवा", "सेवाएँ"], lastUpdated: "अंतिम अपडेट", lastSaved: "अंतिम बार सहेजा", complete: "पूरा", step: (a,b,r) => `चरण ${a} / ${b}${r}`, minutesLeft: n => `लगभग ${n} मिनट शेष` },
-  bn: { services: ["পরিষেবা", "পরিষেবা"], lastUpdated: "সর্বশেষ আপডেট", lastSaved: "সর্বশেষ সংরক্ষণ", complete: "সম্পূর্ণ", step: (a,b,r) => `ধাপ ${a} / ${b}${r}`, minutesLeft: n => `প্রায় ${n} মিনিট বাকি` },
-  mr: { services: ["सेवा", "सेवा"], lastUpdated: "शेवटचे अपडेट", lastSaved: "शेवटचे जतन", complete: "पूर्ण", step: (a,b,r) => `पायरी ${a} / ${b}${r}`, minutesLeft: n => `सुमारे ${n} मिनिटे बाकी` },
-  te: { services: ["సేవ", "సేవలు"], lastUpdated: "చివరి నవీకరణ", lastSaved: "చివరిగా సేవ్ చేసింది", complete: "పూర్తయింది", step: (a,b,r) => `దశ ${a} / ${b}${r}`, minutesLeft: n => `సుమారు ${n} నిమిషాలు మిగిలాయి` },
-  ta: { services: ["சேவை", "சேவைகள்"], lastUpdated: "கடைசியாக புதுப்பிக்கப்பட்டது", lastSaved: "கடைசியாக சேமிக்கப்பட்டது", complete: "முடிந்தது", step: (a,b,r) => `படி ${a} / ${b}${r}`, minutesLeft: n => `சுமார் ${n} நிமிடங்கள் மீதம்` },
-  gu: { services: ["સેવા", "સેવાઓ"], lastUpdated: "છેલ્લું અપડેટ", lastSaved: "છેલ્લે સાચવ્યું", complete: "પૂર્ણ", step: (a,b,r) => `પગલું ${a} / ${b}${r}`, minutesLeft: n => `લગભગ ${n} મિનિટ બાકી` },
-  ur: { services: ["سروس", "خدمات"], lastUpdated: "آخری اپ ڈیٹ", lastSaved: "آخری بار محفوظ", complete: "مکمل", step: (a,b,r) => `مرحلہ ${a} / ${b}${r}`, minutesLeft: n => `تقریباً ${n} منٹ باقی` },
-  kn: { services: ["ಸೇವೆ", "ಸೇವೆಗಳು"], lastUpdated: "ಕೊನೆಯ ನವೀಕರಣ", lastSaved: "ಕೊನೆಯದಾಗಿ ಉಳಿಸಲಾಗಿದೆ", complete: "ಪೂರ್ಣ", step: (a,b,r) => `ಹಂತ ${a} / ${b}${r}`, minutesLeft: n => `ಸುಮಾರು ${n} ನಿಮಿಷಗಳು ಬಾಕಿ` },
-  or: { services: ["ସେବା", "ସେବା"], lastUpdated: "ଶେଷ ଅଦ୍ୟତନ", lastSaved: "ଶେଷ ସଞ୍ଚୟ", complete: "ସମ୍ପୂର୍ଣ୍ଣ", step: (a,b,r) => `ପଦକ୍ଷେପ ${a} / ${b}${r}`, minutesLeft: n => `ପ୍ରାୟ ${n} ମିନିଟ୍ ବାକି` },
-  ml: { services: ["സേവനം", "സേവനങ്ങൾ"], lastUpdated: "അവസാനം പുതുക്കിയത്", lastSaved: "അവസാനം സംരക്ഷിച്ചത്", complete: "പൂർത്തിയായി", step: (a,b,r) => `ഘട്ടം ${a} / ${b}${r}`, minutesLeft: n => `ഏകദേശം ${n} മിനിറ്റ് ബാക്കി` },
+  hi: { services: ["सेवा", "सेवाएँ"], lastUpdated: "अंतिम अपडेट", lastSaved: "अंतिम बार सहेजा", complete: "पूरा", step: (a,b,r) => `चरण ${a} / ${b}${r}`, minutesLeft: n => `लगभग ${n} मिनट शेष`, welcome: n => `स्वागत है, ${n}` },
+  bn: { services: ["পরিষেবা", "পরিষেবা"], lastUpdated: "সর্বশেষ আপডেট", lastSaved: "সর্বশেষ সংরক্ষণ", complete: "সম্পূর্ণ", step: (a,b,r) => `ধাপ ${a} / ${b}${r}`, minutesLeft: n => `প্রায় ${n} মিনিট বাকি`, welcome: n => `স্বাগতম, ${n}` },
+  mr: { services: ["सेवा", "सेवा"], lastUpdated: "शेवटचे अपडेट", lastSaved: "शेवटचे जतन", complete: "पूर्ण", step: (a,b,r) => `पायरी ${a} / ${b}${r}`, minutesLeft: n => `सुमारे ${n} मिनिटे बाकी`, welcome: n => `स्वागत आहे, ${n}` },
+  te: { services: ["సేవ", "సేవలు"], lastUpdated: "చివరి నవీకరణ", lastSaved: "చివరిగా సేవ్ చేసింది", complete: "పూర్తయింది", step: (a,b,r) => `దశ ${a} / ${b}${r}`, minutesLeft: n => `సుమారు ${n} నిమిషాలు మిగిలాయి`, welcome: n => `స్వాగతం, ${n}` },
+  ta: { services: ["சேவை", "சேவைகள்"], lastUpdated: "கடைசியாக புதுப்பிக்கப்பட்டது", lastSaved: "கடைசியாக சேமிக்கப்பட்டது", complete: "முடிந்தது", step: (a,b,r) => `படி ${a} / ${b}${r}`, minutesLeft: n => `சுமார் ${n} நிமிடங்கள் மீதம்`, welcome: n => `வரவேற்கிறோம், ${n}` },
+  gu: { services: ["સેવા", "સેવાઓ"], lastUpdated: "છેલ્લું અપડેટ", lastSaved: "છેલ્લે સાચવ્યું", complete: "પૂર્ણ", step: (a,b,r) => `પગલું ${a} / ${b}${r}`, minutesLeft: n => `લગભગ ${n} મિનિટ બાકી`, welcome: n => `સ્વાગત છે, ${n}` },
+  ur: { services: ["سروس", "خدمات"], lastUpdated: "آخری اپ ڈیٹ", lastSaved: "آخری بار محفوظ", complete: "مکمل", step: (a,b,r) => `مرحلہ ${a} / ${b}${r}`, minutesLeft: n => `تقریباً ${n} منٹ باقی`, welcome: n => `خوش آمدید، ${n}` },
+  kn: { services: ["ಸೇವೆ", "ಸೇವೆಗಳು"], lastUpdated: "ಕೊನೆಯ ನವೀಕರಣ", lastSaved: "ಕೊನೆಯದಾಗಿ ಉಳಿಸಲಾಗಿದೆ", complete: "ಪೂರ್ಣ", step: (a,b,r) => `ಹಂತ ${a} / ${b}${r}`, minutesLeft: n => `ಸುಮಾರು ${n} ನಿಮಿಷಗಳು ಬಾಕಿ`, welcome: n => `ಸ್ವಾಗತ, ${n}` },
+  or: { services: ["ସେବା", "ସେବା"], lastUpdated: "ଶେଷ ଅଦ୍ୟତନ", lastSaved: "ଶେଷ ସଞ୍ଚୟ", complete: "ସମ୍ପୂର୍ଣ୍ଣ", step: (a,b,r) => `ପଦକ୍ଷେପ ${a} / ${b}${r}`, minutesLeft: n => `ପ୍ରାୟ ${n} ମିନିଟ୍ ବାକି`, welcome: n => `ସ୍ୱାଗତ, ${n}` },
+  ml: { services: ["സേവനം", "സേവനങ്ങൾ"], lastUpdated: "അവസാനം പുതുക്കിയത്", lastSaved: "അവസാനം സംരക്ഷിച്ചത്", complete: "പൂർത്തിയായി", step: (a,b,r) => `ഘട്ടം ${a} / ${b}${r}`, minutesLeft: n => `ഏകദേശം ${n} മിനിറ്റ് ബാക്കി`, welcome: n => `സ്വാഗതം, ${n}` },
 };
 
 function translateText(value: string, language: LanguageCode) {
@@ -1465,6 +1466,13 @@ function translateText(value: string, language: LanguageCode) {
   }
 
   const labels = dynamicLabels[language];
+  const welcomeMatch = text.match(/^Welcome,\s*(.+)$/i);
+  if (welcomeMatch && labels?.welcome) {
+    const rawName = welcomeMatch[1].trim();
+    const translatedName = dictionary.get(rawName) || fallbackTranslations[rawName]?.[language] || rawName;
+    return `${lead}${labels.welcome(translatedName)}${tail}`;
+  }
+
   const serviceCount = text.match(/^(\d+)\s+services?$/i);
   if (serviceCount && labels?.services) return `${lead}${serviceCount[1]} ${labels.services[serviceCount[1] === "1" ? 0 : 1]}${tail}`;
   const lastUpdated = text.match(/^Last updated\s+(.+)$/);
