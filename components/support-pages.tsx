@@ -656,81 +656,83 @@ export function Wallet() {
           </Card>
         </div>
 
-        {/* Official Documents Grid */}
-        <div>
-          <div className="mb-5 flex items-end justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h2 className="text-lg font-bold text-[#152321] md:text-xl">Verified Digital Credentials</h2>
-              <p className="text-xs text-[#5e6f68]">Issued by Ministry of Road Transport & Highways and UIDAI</p>
+        {/* Official Demo Documents Grid - Shown only when demo mode is active */}
+        {demoMode && (
+          <div>
+            <div className="mb-5 flex items-end justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-[#152321] md:text-xl">Verified Digital Credentials (Demo Mode)</h2>
+                <p className="text-xs text-[#5e6f68]">Issued by Ministry of Road Transport & Highways and UIDAI (Synthetic Preview)</p>
+              </div>
+              <Badge variant="success">{defaultDocs.length} Documents Active</Badge>
             </div>
-            <Badge variant="success">{defaultDocs.length} Documents Active</Badge>
-          </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {defaultDocs.map((doc) => (
-              <Card
-                key={doc.type}
-                className="group flex flex-col justify-between transition-all hover:scale-[1.01] hover:border-[#167c74] hover:shadow-md"
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">{doc.icon}</span>
-                    <div>
-                      <CardTitle className="text-sm">{doc.type}</CardTitle>
-                      <CardDescription className="text-[11px] font-mono font-bold text-[#167c74]">
-                        {doc.number}
-                      </CardDescription>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {defaultDocs.map((doc) => (
+                <Card
+                  key={doc.type}
+                  className="group flex flex-col justify-between transition-all hover:scale-[1.01] hover:border-[#167c74] hover:shadow-md"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl">{doc.icon}</span>
+                      <div>
+                        <CardTitle className="text-sm">{doc.type}</CardTitle>
+                        <CardDescription className="text-[11px] font-mono font-bold text-[#167c74]">
+                          {doc.number}
+                        </CardDescription>
+                      </div>
                     </div>
-                  </div>
-                  <Badge variant="success" className="text-[10px]">
-                    Verified
-                  </Badge>
-                </CardHeader>
+                    <Badge variant="success" className="text-[10px]">
+                      Verified
+                    </Badge>
+                  </CardHeader>
 
-                <CardContent className="space-y-2 text-xs py-2">
-                  <div className="flex justify-between text-[#5e6f68]">
-                    <span>Holder:</span>
-                    <strong className="text-[#152321]">{doc.holderName}</strong>
-                  </div>
-                  <div className="flex justify-between text-[#5e6f68]">
-                    <span>Category:</span>
-                    <strong className="text-[#152321]">{doc.category}</strong>
-                  </div>
-                  <div className="flex justify-between text-[#5e6f68]">
-                    <span>Validity:</span>
-                    <span className="font-bold text-[#0d5c45]">{doc.status}</span>
-                  </div>
-                </CardContent>
+                  <CardContent className="space-y-2 text-xs py-2">
+                    <div className="flex justify-between text-[#5e6f68]">
+                      <span>Holder:</span>
+                      <strong className="text-[#152321]">{doc.holderName}</strong>
+                    </div>
+                    <div className="flex justify-between text-[#5e6f68]">
+                      <span>Category:</span>
+                      <strong className="text-[#152321]">{doc.category}</strong>
+                    </div>
+                    <div className="flex justify-between text-[#5e6f68]">
+                      <span>Validity:</span>
+                      <span className="font-bold text-[#0d5c45]">{doc.status}</span>
+                    </div>
+                  </CardContent>
 
-                <CardFooter className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
-                  <Button
-                    size="sm"
-                    className="flex-1 gap-1.5 text-xs"
-                    onClick={() => setPreview({ ...doc, mode: "view" })}
-                  >
-                    <Eye size={13} /> View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 gap-1.5 text-xs"
-                    onClick={() => setPreview({ ...doc, mode: "qr" })}
-                  >
-                    <QrCode size={13} /> QR Code
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="gap-1.5 px-2.5 text-xs"
-                    onClick={() => downloadWalletDocumentPdf(doc)}
-                  >
-                    <Download size={13} />
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                  <CardFooter className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-1.5 text-xs"
+                      onClick={() => setPreview({ ...doc, mode: "view" })}
+                    >
+                      <Eye size={13} /> View
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 gap-1.5 text-xs"
+                      onClick={() => setPreview({ ...doc, mode: "qr" })}
+                    >
+                      <QrCode size={13} /> QR Code
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1.5 px-2.5 text-xs"
+                      onClick={() => downloadWalletDocumentPdf(doc)}
+                    >
+                      <Download size={13} />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Additional Linked Records */}
         {additionalDocuments.length > 0 && (
@@ -757,120 +759,124 @@ export function Wallet() {
           </div>
         )}
 
-        {/* Upload Private Document Section - Shown only when demo mode is active */}
-        {demoMode && (
-          <section className="rounded-2xl border border-[#cfe3dd] bg-[#fbfdfc] p-6 shadow-xs">
-            <div className="mb-4">
-              <h3 className="text-sm font-bold text-[#152321]">Upload Additional Supporting Document</h3>
-              <p className="text-xs text-[#5e6f68]">Attach PDF or image credentials directly to your local and Appwrite digital locker.</p>
+        {/* Upload Private Document Section - Accessible for Citizen Account / Auth Documents */}
+        <section className="rounded-2xl border border-[#cfe3dd] bg-[#fbfdfc] p-6 shadow-xs">
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-[#152321]">Upload Additional Supporting Document</h3>
+            <p className="text-xs text-[#5e6f68]">Attach PDF or image credentials directly to your local and Appwrite digital locker.</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">1</span>
+                <span className="text-xs font-bold text-[#405e54]">Document category</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { type: "Photo" as const, label: "Applicant photo", detail: "Clear face image", icon: UserCheck },
+                  { type: "Address Proof" as const, label: "Address proof", detail: "Address document", icon: Landmark },
+                  { type: "Name Proof" as const, label: "Name proof", detail: "Identity document", icon: IdCard },
+                  { type: "Age Proof" as const, label: "Age proof", detail: "Birth or school record", icon: CalendarDays },
+                  { type: "Medical Self-Declaration" as const, label: "Medical declaration", detail: "Form 1 document", icon: FileText },
+                ].map(({ type, label, detail, icon: Icon }) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setStandardDocumentType(type)}
+                    className={`flex min-h-16 items-start gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                      standardDocumentType === type ? "border-[#167c74] bg-[#eaf4ef] ring-2 ring-[#167c74]/15" : "border-[#dce8e5] bg-white hover:border-[#8bbbab]"
+                    }`}
+                  >
+                    <Icon size={16} className={standardDocumentType === type ? "text-[#167c74]" : "text-[#71877e]"} />
+                    <span>
+                      <strong className="block text-xs text-[#173b32]">{label}</strong>
+                      <small className="mt-0.5 block text-[10px] text-[#687d75]">{detail}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="space-y-4">
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">1</span>
-                  <span className="text-xs font-bold text-[#405e54]">Document category</span>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                  {[
-                    { type: "Photo" as const, label: "Applicant photo", detail: "Clear face image", icon: UserCheck },
-                    { type: "Address Proof" as const, label: "Address proof", detail: "Address document", icon: Landmark },
-                    { type: "Name Proof" as const, label: "Name proof", detail: "Identity document", icon: IdCard },
-                    { type: "Age Proof" as const, label: "Age proof", detail: "Birth or school record", icon: CalendarDays },
-                    { type: "Medical Self-Declaration" as const, label: "Medical declaration", detail: "Form 1 document", icon: FileText },
-                  ].map(({ type, label, detail, icon: Icon }) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setStandardDocumentType(type)}
-                      className={`flex min-h-16 items-start gap-2 rounded-xl border p-2.5 text-left transition-all ${
-                        standardDocumentType === type ? "border-[#167c74] bg-[#eaf4ef] ring-2 ring-[#167c74]/15" : "border-[#dce8e5] bg-white hover:border-[#8bbbab]"
-                      }`}
-                    >
-                      <Icon size={16} className={standardDocumentType === type ? "text-[#167c74]" : "text-[#71877e]"} />
-                      <span>
-                        <strong className="block text-xs text-[#173b32]">{label}</strong>
-                        <small className="mt-0.5 block text-[10px] text-[#687d75]">{detail}</small>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">2</span>
-                  <span className="text-xs font-bold text-[#405e54]">Choose file</span>
-                </div>
-                <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#9fc8bc] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0">
-                    <strong className="block truncate text-xs text-[#173b32]">{selectedWalletFile ? selectedWalletFile.name : "No document selected"}</strong>
-                    <small className="block text-[11px] text-[#687d75]">PDF or image · maximum 10 MB</small>
-                  </span>
-                  <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => fileInputRef.current?.click()}>
-                    <Plus size={15} /> Choose file
-                  </Button>
-                </div>
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-[#167c74] text-[10px] font-black text-white">2</span>
+                <span className="text-xs font-bold text-[#405e54]">Choose file</span>
               </div>
-
-              <div className="flex flex-col gap-3 border-t border-[#e4efeb] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="m-0 text-[11px] text-[#687d75]">Uploading as <strong className="text-[#173b32]">{standardDocumentType}</strong></p>
-                <Button type="button" disabled={!selectedWalletFile || walletUploading} className="gap-2" onClick={uploadStandardWalletFile}>
-                  <Upload size={16} /> {walletUploading ? "Uploading…" : "Upload to wallet"}
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#9fc8bc] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="min-w-0">
+                  <strong className="block truncate text-xs text-[#173b32]">{selectedWalletFile ? selectedWalletFile.name : "No document selected"}</strong>
+                  <small className="block text-[11px] text-[#687d75]">PDF or image · maximum 10 MB</small>
+                </span>
+                <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => fileInputRef.current?.click()}>
+                  <Plus size={15} /> Choose file
                 </Button>
               </div>
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="sr-only"
-              accept="application/pdf,image/*"
-              onChange={(event) => selectWalletFile(event.target.files?.[0] || null)}
-            />
-            {standardWalletNotice && (
-              <p className="mt-4 rounded-xl border border-[#cfe3dd] bg-[#f2f8f6] px-4 py-2.5 text-xs font-medium text-[#405e54]" role="status">
-                {standardWalletNotice}
-              </p>
-            )}
+            <div className="flex flex-col gap-3 border-t border-[#e4efeb] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="m-0 text-[11px] text-[#687d75]">Uploading as <strong className="text-[#173b32]">{standardDocumentType}</strong></p>
+              <Button type="button" disabled={!selectedWalletFile || walletUploading} className="gap-2" onClick={uploadStandardWalletFile}>
+                <Upload size={16} /> {walletUploading ? "Uploading…" : "Upload to wallet"}
+              </Button>
+            </div>
+          </div>
 
-            {uploadedWalletFiles.length > 0 && (
-              <div className="mt-6 text-left">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-[#587269]">Your uploaded documents</h4>
-                  <span className="text-[11px] font-medium text-[#687d75]">Stored in your account</span>
-                </div>
-                <div className="overflow-hidden rounded-xl border border-[#d8e5e0] bg-white">
-                  {uploadedWalletFiles.map((file, index) => (
-                    <div key={file.$id} className={`px-4 py-3 ${index > 0 ? "border-t border-[#edf2ef]" : ""}`}>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]"><FileCheck2 size={17} /></span>
-                        <span className="min-w-0 flex-1">
-                          <strong className="block break-words text-xs text-[#173b32]">{file.name.replace(/^(Photo|Address Proof|Name Proof|Age Proof|Medical Self-Declaration) - /, "")}</strong>
-                          <small className="mt-0.5 block text-[11px] text-[#687d75]">{file.mimeType || "Document"} · {Math.max(1, Math.round(file.sizeOriginal / 1024))} KB</small>
-                          <span className="mt-1.5 inline-flex rounded-full bg-[#eaf4ef] px-2 py-0.5 text-[10px] font-bold text-[#0f7655]">{file.category}</span>
-                        </span>
-                        <div className="flex w-full shrink-0 gap-2 sm:w-auto">
-                          <Button type="button" size="sm" variant="outline" className="flex-1 gap-1.5 sm:flex-none" onClick={() => viewWalletFile(file.$id)}><Eye size={14} /> View</Button>
-                          <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 sm:flex-none" onClick={() => setEditingWalletFile({ id: file.$id, name: file.name })}><FilePenLine size={14} /> Rename</Button>
-                          <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 text-red-700 hover:bg-red-50 hover:text-red-700 sm:flex-none" disabled={deletingWalletFile === file.$id} onClick={() => deleteStandardWalletFile(file.$id, file.name)}><Trash2 size={14} /> {deletingWalletFile === file.$id ? "Deleting…" : "Delete"}</Button>
-                        </div>
-                      </div>
-                      {editingWalletFile?.id === file.$id && (
-                        <form className="mt-3 flex flex-col gap-2 rounded-xl bg-[#f2f8f6] p-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); renameStandardWalletFile(); }}>
-                          <Input aria-label="Document name" value={editingWalletFile.name} onChange={(event) => setEditingWalletFile({ ...editingWalletFile, name: event.target.value })} className="h-9 bg-white text-xs" autoFocus />
-                          <div className="flex gap-2">
-                            <Button type="submit" size="sm" disabled={renamingWalletFile}>{renamingWalletFile ? "Saving…" : "Save name"}</Button>
-                            <Button type="button" size="sm" variant="outline" onClick={() => setEditingWalletFile(null)}>Cancel</Button>
-                          </div>
-                        </form>
-                      )}
-                    </div>
-                  ))}
-                </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="sr-only"
+            accept="application/pdf,image/*"
+            onChange={(event) => selectWalletFile(event.target.files?.[0] || null)}
+          />
+          {standardWalletNotice && (
+            <p className="mt-4 rounded-xl border border-[#cfe3dd] bg-[#f2f8f6] px-4 py-2.5 text-xs font-medium text-[#405e54]" role="status">
+              {standardWalletNotice}
+            </p>
+          )}
+
+          {uploadedWalletFiles.length > 0 ? (
+            <div className="mt-6 text-left">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-[#587269]">Your uploaded documents</h4>
+                <span className="text-[11px] font-medium text-[#687d75]">Stored in your account</span>
               </div>
-            )}
-          </section>
-        )}
+              <div className="overflow-hidden rounded-xl border border-[#d8e5e0] bg-white">
+                {uploadedWalletFiles.map((file, index) => (
+                  <div key={file.$id} className={`px-4 py-3 ${index > 0 ? "border-t border-[#edf2ef]" : ""}`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]"><FileCheck2 size={17} /></span>
+                      <span className="min-w-0 flex-1">
+                        <strong className="block break-words text-xs text-[#173b32]">{file.name.replace(/^(Photo|Address Proof|Name Proof|Age Proof|Medical Self-Declaration) - /, "")}</strong>
+                        <small className="mt-0.5 block text-[11px] text-[#687d75]">{file.mimeType || "Document"} · {Math.max(1, Math.round(file.sizeOriginal / 1024))} KB</small>
+                        <span className="mt-1.5 inline-flex rounded-full bg-[#eaf4ef] px-2 py-0.5 text-[10px] font-bold text-[#0f7655]">{file.category}</span>
+                      </span>
+                      <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+                        <Button type="button" size="sm" variant="outline" className="flex-1 gap-1.5 sm:flex-none" onClick={() => viewWalletFile(file.$id)}><Eye size={14} /> View</Button>
+                        <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 sm:flex-none" onClick={() => setEditingWalletFile({ id: file.$id, name: file.name })}><FilePenLine size={14} /> Rename</Button>
+                        <Button type="button" size="sm" variant="ghost" className="flex-1 gap-1.5 text-red-700 hover:bg-red-50 hover:text-red-700 sm:flex-none" disabled={deletingWalletFile === file.$id} onClick={() => deleteStandardWalletFile(file.$id, file.name)}><Trash2 size={14} /> {deletingWalletFile === file.$id ? "Deleting…" : "Delete"}</Button>
+                      </div>
+                    </div>
+                    {editingWalletFile?.id === file.$id && (
+                      <form className="mt-3 flex flex-col gap-2 rounded-xl bg-[#f2f8f6] p-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); renameStandardWalletFile(); }}>
+                        <Input aria-label="Document name" value={editingWalletFile.name} onChange={(event) => setEditingWalletFile({ ...editingWalletFile, name: event.target.value })} className="h-9 bg-white text-xs" autoFocus />
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" disabled={renamingWalletFile}>{renamingWalletFile ? "Saving…" : "Save name"}</Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => setEditingWalletFile(null)}>Cancel</Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            !demoMode && (
+              <div className="mt-4 rounded-xl border border-dashed border-[#cfe3dd] bg-[#f9fcfa] p-5 text-center">
+                <p className="text-xs text-[#5e6f68]">No uploaded documents in your account yet. Use the selector above to attach your verified identity or vehicle records.</p>
+              </div>
+            )
+          )}
+        </section>
       </div>
 
       {/* Add Document Dialog Modal */}
