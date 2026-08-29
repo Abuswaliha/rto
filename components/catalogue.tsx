@@ -6,6 +6,7 @@ import {
   Car,
   CheckCircle2,
   Clock3,
+  Download,
   FileText,
   Gavel,
   IdCard,
@@ -17,6 +18,7 @@ import {
 import { useState } from "react";
 import { useDemoMode } from "./demo-mode-provider";
 import { PageShell } from "./page-shell";
+import { downloadChallanReceiptPdf } from "@/lib/demo-pdf";
 import {
   Card,
   CardHeader,
@@ -331,17 +333,57 @@ export function ChallanCheck() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+              <div className="mt-6 pt-4 border-t flex flex-wrap items-center justify-between gap-3">
                 {!paid ? (
-                  <Button
-                    onClick={() => setPaid(true)}
-                    className="bg-[#0d5c45] hover:bg-[#094735] font-bold gap-2"
-                  >
-                    Pay Fine Online (₹ 500)
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        downloadChallanReceiptPdf({
+                          id: "CHL-2026-887412",
+                          vehicle: vehicleNo,
+                          amount: "₹ 500.00",
+                          date: "24 Aug 2026, 14:20 PM",
+                          offense: "Over-Speeding (Section 183)",
+                          status: "PENDING",
+                          rto: "MH-10 Sangli Traffic Division",
+                        })
+                      }
+                      className="gap-1.5 text-xs"
+                    >
+                      <Download size={14} /> Download Notice PDF
+                    </Button>
+                    <Button
+                      onClick={() => setPaid(true)}
+                      className="bg-[#0d5c45] hover:bg-[#094735] font-bold gap-2"
+                    >
+                      Pay Fine Online (₹ 500)
+                    </Button>
+                  </>
                 ) : (
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#0d5c45]">
-                    <CheckCircle2 size={16} /> Receipt #REC-2026-9912 generated
+                  <div className="flex flex-wrap items-center justify-between w-full gap-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#0d5c45]">
+                      <CheckCircle2 size={16} /> Payment Completed · Receipt #REC-2026-9912 generated
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        downloadChallanReceiptPdf({
+                          id: "CHL-2026-887412",
+                          vehicle: vehicleNo,
+                          amount: "₹ 500.00",
+                          date: "24 Aug 2026, 14:20 PM",
+                          offense: "Over-Speeding (Section 183)",
+                          status: "PAID",
+                          rto: "MH-10 Sangli Traffic Division",
+                          paymentRef: "TESTPAY-ECHALLAN-8921",
+                        })
+                      }
+                      className="gap-1.5 font-bold"
+                    >
+                      <Download size={14} /> Download Paid Receipt PDF
+                    </Button>
                   </div>
                 )}
               </div>

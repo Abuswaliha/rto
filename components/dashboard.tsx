@@ -95,7 +95,7 @@ const SERVICES_CATALOG: ServiceItem[] = [
     fee: "₹300",
     formNumber: "Form 29 & 30",
     icon: Car,
-    route: "/vehicles",
+    route: "/vehicles/transfer",
     badge: "Ownership Transfer",
   },
   {
@@ -106,7 +106,7 @@ const SERVICES_CATALOG: ServiceItem[] = [
     fee: "Free",
     formNumber: "Vahan DB",
     icon: Car,
-    route: "/vehicles",
+    route: "/vehicles/search",
     badge: "Instant RC Check",
   },
   {
@@ -162,7 +162,36 @@ export function Dashboard() {
   }, []);
 
   const progress = Math.round(((draft?.step || 0) / 5) * 100);
-  const localApps = applicationsList.length > 0 ? applicationsList : application ? [application] : [];
+  const localApps =
+    applicationsList.length > 0
+      ? applicationsList
+      : application
+      ? [application]
+      : [
+          {
+            id: "SRTO-LL-2026-981240",
+            fullName: profile?.fullName || "Aditi Verma",
+            identity: "9999 8888 7777",
+            pan: "ABCDE1234F",
+            mobile: "9876543210",
+            gender: "Female",
+            dob: "15/01/2000",
+            guardian: "Ramesh Verma",
+            address: "Flat 402, Green Avenue, Sangli",
+            city: "Sangli",
+            pincode: "416416",
+            state: "Maharashtra",
+            rto: "MH-10 Sangli RTO",
+            vehicle: "MCWG (Motorcycle) / LMV (Car)",
+            appointment: "29 Aug · 11:20 AM",
+            appointmentId: "APT-LL-2026-9812",
+            feeTotal: "₹170",
+            paymentReference: "TESTPAY-LL-2026-483921",
+            status: "appointment-scheduled",
+            statusCode: "APPOINTMENT_SCHEDULED",
+            submittedAt: new Date().toISOString(),
+          },
+        ];
   const allApps = [...appwriteApps, ...localApps.filter((local) => !appwriteApps.some((remote) => remote.id === local.id))];
   const hasApp = allApps.length > 0 || appwriteApps.length > 0;
 
@@ -376,7 +405,7 @@ export function Dashboard() {
                   <Link href="/apply/learner-licence">Apply for Learner Licence</Link>
                 </Button>
                 <Button size="sm" variant="outline" asChild>
-                  <Link href="/vehicles">Vehicle Transfer</Link>
+                  <Link href="/vehicles/transfer">Vehicle Transfer</Link>
                 </Button>
               </div>
             </Card>

@@ -35,6 +35,7 @@ import {
   isAppwriteConfigured,
 } from "@/lib/appwrite";
 import { useDemoMode } from "./demo-mode-provider";
+import { downloadWalletDocumentPdf } from "@/lib/demo-pdf";
 
 export interface VehicleData {
   regNumber: string;
@@ -409,9 +410,30 @@ export function VehicleSearch({
                 <p className="text-[11px] text-[#5e6f68] font-medium">{vehicle.vehicleClass}</p>
               </div>
 
-              <div className="text-right">
-                <span className="text-[11px] text-[#5e6f68] block">Issuing Authority</span>
-                <strong className="text-xs font-bold text-[#152321] block">{vehicle.rtoOffice}</strong>
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <span className="text-[11px] text-[#5e6f68] block">Issuing Authority</span>
+                  <strong className="text-xs font-bold text-[#152321] block">{vehicle.rtoOffice}</strong>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    downloadWalletDocumentPdf({
+                      type: "Certificate of Registration (RC)",
+                      number: vehicle.regNumber,
+                      holderName: vehicle.ownerName,
+                      authority: vehicle.rtoOffice,
+                      issued: vehicle.regDate,
+                      expiry: vehicle.fitnessValidUntil,
+                      vehicleModel: vehicle.makerModel,
+                      category: vehicle.vehicleClass,
+                      fuelType: vehicle.fuelType,
+                    })
+                  }
+                  className="gap-1.5 font-bold"
+                >
+                  <Download size={14} /> Download RC PDF
+                </Button>
               </div>
             </div>
 

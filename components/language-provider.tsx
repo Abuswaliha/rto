@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { pageTranslationRows } from "./i18n-page-additions";
+import { dashboardTranslationRows } from "./i18n-dashboard";
 import { Languages as LanguagesIcon } from "lucide-react";
 import {
   Select,
@@ -782,7 +783,7 @@ const languageCodes = languages.slice(1).map((item) => item.code);
 const dictionaries = Object.fromEntries(
   languageCodes.map((code, index) => [
     code,
-    new Map([...rows, ...pageTranslationRows].map((row) => [row[0], row[index + 1]])),
+    new Map([...rows, ...pageTranslationRows, ...dashboardTranslationRows].map((row) => [row[0], row[index + 1]])),
   ]),
 ) as Record<Exclude<LanguageCode, "en">, Map<string, string>>;
 const hindiOverrides: Array<[string,string]> = [

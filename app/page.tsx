@@ -10,7 +10,7 @@ const services=[
   {icon:FileCheck2,title:"Learner Licence",copy:"Check eligibility, documents, fee and time before you begin.",meta:"About 8 minutes",href:"/apply/learner-licence",action:"View application"},
   {icon:CalendarDays,title:"Appointments",copy:"Book or manage a clearly labelled demo RTO visit.",meta:"Choose a time",href:"/appointments",action:"Manage visit"},
   {icon:Workflow,title:"Track application",copy:"See what is complete and the exact action that comes next.",meta:"Live demo status",href:"/track",action:"Track now"},
-  {icon:Car,title:"Vehicle details",copy:"Check a seeded synthetic vehicle record safely.",meta:"Demo record",href:"/vehicles",action:"Check vehicle"},
+  {icon:Car,title:"Vehicle details",copy:"Check a seeded synthetic vehicle record safely.",meta:"Demo record",href:"/vehicles/search",action:"Check vehicle"},
   {icon:Gavel,title:"eChallan",copy:"Review and test-pay a fictional demonstration challan.",meta:"No real payment",href:"/challans",action:"Check challan"},
 ];
 
