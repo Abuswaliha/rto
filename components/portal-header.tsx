@@ -3,7 +3,7 @@
 import Link from "./safe-link";
 import {
   Accessibility,
-  Bell,
+  ArrowRight,
   Menu,
   X,
   Route,
@@ -13,6 +13,7 @@ import {
   Car,
   WalletCards,
   Gavel,
+  Home,
   Search,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -42,17 +43,21 @@ export function PortalHeader() {
       isCurrent(href) ? "font-bold text-[#167c74]" : "text-[#263a33]"
     }`;
 
-  const mobileNavLinkClass = (href: string) =>
-    `block py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
-      isCurrent(href)
-        ? "bg-[#eaf4ef] font-bold text-[#167c74]"
-        : "text-[#263a33] hover:bg-slate-50"
-    }`;
-
   useEffect(() => {
     const timer = setTimeout(() => setSignedIn(hasSession()), 0);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!menu) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenu(false);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [menu]);
 
   return (
     <>
@@ -309,31 +314,32 @@ export function PortalHeader() {
         </nav>
 
         {/* Right Tools Toolbar */}
-        <div className="flex items-center gap-2.5 pl-6">
+        <div className="flex shrink-0 items-center gap-1.5 pl-2 sm:gap-2.5 sm:pl-6">
           <div className="hidden sm:block">
             <LanguageSwitcher compact />
           </div>
           <button
             type="button"
             onClick={() => setAccessibilityModalOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74]"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74] sm:h-10 sm:w-10"
             aria-label="Open Accessibility Settings (Zoom & Color Filters)"
             title="Accessibility Settings (Zoom, Color Blind Modes)"
           >
-            <Accessibility size={19} />
+            <Accessibility size={18} />
           </button>
 
           {signedIn ? (
             <>
               <Link
-                className="grid h-10 w-10 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74]"
-                href="/notifications"
-                aria-label="Notifications"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#667572] transition-colors hover:bg-[#ddf3ef] hover:text-[#167c74] sm:h-10 sm:w-10"
+                href="/wallet"
+                aria-label="Document Wallet"
+                title="Document Wallet"
               >
-                <Bell size={19} />
+                <WalletCards size={18} />
               </Link>
               <Link
-                className="grid h-10 w-10 place-items-center rounded-full bg-[#167c74] text-xs font-extrabold text-white shadow-sm ring-2 ring-white transition-transform hover:scale-105"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#167c74] text-xs font-extrabold text-white shadow-sm ring-2 ring-white transition-transform hover:scale-105 sm:h-10 sm:w-10"
                 href="/profile"
                 aria-label="Demo Citizen profile"
               >
@@ -342,7 +348,7 @@ export function PortalHeader() {
             </>
           ) : (
             <Link
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-[#167c74] bg-white px-4 text-xs font-bold text-[#167c74] transition-all hover:bg-[#167c74] hover:text-white"
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-[#167c74] bg-white px-3 text-xs font-bold text-[#167c74] transition-all hover:bg-[#167c74] hover:text-white sm:h-10 sm:px-4"
               href="/login"
             >
               Sign in
@@ -351,9 +357,10 @@ export function PortalHeader() {
 
           {/* Mobile Menu Trigger */}
           <button
-            className="grid h-10 w-10 place-items-center rounded-xl text-[#152321] hover:bg-[#ddf3ef] md:hidden"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#152321] hover:bg-[#ddf3ef] sm:h-10 sm:w-10 md:hidden"
             onClick={() => setMenu((v) => !v)}
             aria-expanded={menu}
+            aria-controls="mobile-navigation"
             aria-label="Toggle navigation menu"
           >
             {menu ? <X size={20} /> : <Menu size={20} />}
@@ -369,63 +376,99 @@ export function PortalHeader() {
 
       {/* Mobile Dropdown Menu Drawer */}
       {menu && (
-        <div className="border-b border-[#dce8e5] bg-white px-4 py-3 shadow-lg md:hidden">
-          <div className="mb-3 flex items-center justify-between rounded-xl bg-[#f2f8f6] p-2.5">
-            <span className="px-1 text-xs font-bold text-[#40564f]">Portal language</span>
-            <LanguageSwitcher compact />
-          </div>
-          <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
-            <Link
-              onClick={() => setMenu(false)}
-              className={mobileNavLinkClass("/services")}
-              href="/services"
-            >
-              Services Catalogue
-            </Link>
-            <Link
-              onClick={() => setMenu(false)}
-              className="pl-6 py-1 text-xs font-medium text-[#5e6f68] hover:text-[#167c74]"
-              href="/apply/learner-licence"
-            >
-              • Learner Licence
-            </Link>
-            <Link
-              onClick={() => setMenu(false)}
-              className="pl-6 py-1 text-xs font-medium text-[#5e6f68] hover:text-[#167c74]"
-              href="/apply/permanent-licence"
-            >
-              • Permanent DL
-            </Link>
-            <Link
-              onClick={() => setMenu(false)}
-              className="pl-6 py-1 text-xs font-medium text-[#5e6f68] hover:text-[#167c74]"
-              href="/vehicles"
-            >
-              • Vehicle Transfer & RC
-            </Link>
-            <Link
-              onClick={() => setMenu(false)}
-              className="pl-6 py-1 text-xs font-medium text-[#5e6f68] hover:text-[#167c74]"
-              href="/challans"
-            >
-              • eChallan Payment
-            </Link>
-            <Link
-              onClick={() => setMenu(false)}
-              className={mobileNavLinkClass("/track")}
-              href="/track"
-            >
-              Applications
-            </Link>
-            <Link
-              onClick={() => setMenu(false)}
-              className={mobileNavLinkClass("/profile")}
-              href={signedIn ? "/profile" : "/login"}
-            >
-              {signedIn ? "Profile" : "Sign in"}
-            </Link>
-          </nav>
-        </div>
+        <>
+          <button
+            type="button"
+            className="fixed inset-x-0 bottom-0 top-[112px] z-30 bg-[#10241e]/30 backdrop-blur-[1px] md:hidden"
+            onClick={() => setMenu(false)}
+            aria-label="Close navigation menu"
+          />
+          <aside
+            id="mobile-navigation"
+            className="fixed inset-x-0 bottom-0 top-[112px] z-30 overflow-y-auto border-t border-[#dce8e5] bg-[#fbfcfa] px-4 py-5 shadow-2xl animate-in slide-in-from-top-3 duration-200 md:hidden"
+          >
+            <div className="mx-auto max-w-md">
+              <div className="mb-5 flex items-center justify-between rounded-2xl border border-[#cfe3dd] bg-[#eaf4ef] px-4 py-3">
+                <div>
+                  <p className="m-0 text-xs font-extrabold text-[#173b32]">Citizen portal</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-[#587269]">Choose a service or check your progress.</p>
+                </div>
+                <LanguageSwitcher compact />
+              </div>
+
+              <nav className="grid grid-cols-2 gap-2" aria-label="Mobile navigation">
+                {[
+                  { href: "/dashboard", label: "Dashboard", icon: Home },
+                  { href: "/services", label: "Services", icon: FileText },
+                  { href: "/track", label: "Applications", icon: Search },
+                  { href: "/wallet", label: "Wallet", icon: WalletCards },
+                ].map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMenu(false)}
+                    className={`flex min-h-20 flex-col justify-between rounded-2xl border p-3 text-left transition-colors ${
+                      isCurrent(href)
+                        ? "border-[#167c74] bg-[#167c74] text-white shadow-sm"
+                        : "border-[#d8e5e0] bg-white text-[#173b32] hover:border-[#167c74] hover:bg-[#f2f8f6]"
+                    }`}
+                  >
+                    <Icon size={19} aria-hidden="true" />
+                    <span className="text-xs font-extrabold">{label}</span>
+                  </Link>
+                ))}
+              </nav>
+
+              <section className="mt-6" aria-labelledby="mobile-services-title">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <h2 id="mobile-services-title" className="m-0 text-xs font-extrabold uppercase tracking-[0.14em] text-[#587269]">
+                    Start a service
+                  </h2>
+                  <Link href="/services" onClick={() => setMenu(false)} className="text-xs font-bold text-[#167c74]">
+                    View all
+                  </Link>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-[#d8e5e0] bg-white">
+                  {[
+                    { href: "/apply/learner-licence", label: "Learner Licence", detail: "Form 2 application", icon: FileText },
+                    { href: "/apply/permanent-licence", label: "Permanent Driving Licence", detail: "Form 4 application", icon: IdCard },
+                    { href: "/vehicles/transfer", label: "Vehicle transfer", detail: "Form 29 & 30", icon: Car },
+                    { href: "/challans", label: "eChallan payment", detail: "Check traffic fines", icon: WalletCards },
+                    { href: "/wallet", label: "Document wallet", detail: "Upload and manage documents", icon: WalletCards },
+                  ].map(({ href, label, detail, icon: Icon }, index) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMenu(false)}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#f2f8f6] ${index > 0 ? "border-t border-[#edf2ef]" : ""}`}
+                    >
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#eaf4ef] text-[#167c74]">
+                        <Icon size={17} aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <strong className="block text-xs text-[#173b32]">{label}</strong>
+                        <small className="block text-[11px] text-[#687d75]">{detail}</small>
+                      </span>
+                      <ChevronDown className="-rotate-90 text-[#7f938b]" size={16} aria-hidden="true" />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+
+              <Link
+                onClick={() => setMenu(false)}
+                className="mt-5 flex items-center justify-between rounded-2xl bg-[#173b32] px-4 py-3.5 text-white"
+                href={signedIn ? "/profile" : "/login"}
+              >
+                <span>
+                  <strong className="block text-sm">{signedIn ? "Your profile" : "Sign in to continue"}</strong>
+                  <small className="text-xs text-white/75">{signedIn ? "Manage your demo account" : "Access saved applications"}</small>
+                </span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            </div>
+          </aside>
+        </>
       )}
     </>
   );

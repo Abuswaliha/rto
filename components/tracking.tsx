@@ -273,23 +273,23 @@ export function Tracking() {
 
   return (
     <PageShell>
-      {/* Tracking Hero */}
-      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-10">
-        <div className="mx-auto max-w-6xl px-6">
+      {/* Tracking Hero - Full Screen Width */}
+      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-8 md:py-10">
+        <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-8 lg:px-12">
           <Badge variant="secondary" className="mb-2 gap-1.5 font-bold">
             <Search size={14} className="text-[#167c74]" /> Real-Time Application Tracking
           </Badge>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
+          <h1 className="text-xl font-bold tracking-tight text-[#152321] md:text-2xl">
             Track Application Status & Download Receipts
           </h1>
-          <p className="mt-1 max-w-2xl text-xs font-medium text-[#5e6f68] md:text-sm">
+          <p className="mt-1 max-w-3xl text-xs font-medium text-[#5e6f68] md:text-sm">
             Inspect real-time application processing, review booked test slots, and download official government vector PDF receipts.
           </p>
 
           {/* Search Box */}
           <form
             onSubmit={handleSearch}
-            className="mt-6 flex max-w-xl items-center gap-2 rounded-2xl border border-[#cfe3dd] bg-white p-2 shadow-xs"
+            className="mt-5 flex max-w-xl items-center gap-2 rounded-2xl border border-[#cfe3dd] bg-white p-2 shadow-xs"
           >
             <Search className="ml-2 text-[#5e6f68]" size={18} />
             <input
@@ -339,8 +339,8 @@ export function Tracking() {
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      {/* Main Content - Full Screen Width */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-8 lg:px-12">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-[#167c74]" />

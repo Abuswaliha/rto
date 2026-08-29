@@ -9,13 +9,16 @@ import {
   CheckCircle2,
   Download,
   FileCheck2,
+  FileText,
   Info,
   Landmark,
   Loader2,
+  Paperclip,
   QrCode,
   Search,
   ShieldCheck,
   Sparkles,
+  Upload,
   UserCheck,
 } from "lucide-react";
 import Link from "./safe-link";
@@ -38,9 +41,10 @@ import {
   isAppwriteConfigured,
   saveApplicationRecord,
 } from "@/lib/appwrite";
-import { VehicleSearch } from "@/components/vehicle-search";
+import { VehicleSearch, maskOwnerName } from "@/components/vehicle-search";
 import { downloadVehicleTransferPdf } from "@/lib/demo-pdf";
 import { DemoApplication, newApplicationId, newPaymentReference, saveApplication } from "@/lib/storage";
+import { useDemoMode } from "./demo-mode-provider";
 
 const SEEDED_VEHICLES: Record<
   string,
@@ -84,20 +88,23 @@ const SEEDED_VEHICLES: Record<
 };
 
 export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "transfer" | "search" }) {
+  const { enabled: demoMode } = useDemoMode();
   const [viewMode, setViewMode] = useState<"all" | "transfer" | "search">(mode);
   const [step, setStep] = useState<number>(0);
 
   // Search / Verify State
-  const [regInput, setRegInput] = useState("MH10EA1234");
+  const [regInput, setRegInput] = useState(demoMode ? "MH10EA1234" : "MH10EA1234");
   const [vehicle, setVehicle] = useState(SEEDED_VEHICLES.MH10EA1234);
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleVerified, setVehicleVerified] = useState(true);
 
   // Buyer Info State
-  const [buyerName, setBuyerName] = useState("Amit Kumar Patel");
-  const [buyerAadhaar, setBuyerAadhaar] = useState("9999 8888 7777");
-  const [buyerMobile, setBuyerMobile] = useState("9876543210");
-  const [buyerAddress, setBuyerAddress] = useState("Flat 402, Green Avenue, Sangli 416416");
+  const [buyerName, setBuyerName] = useState(demoMode ? "Amit Kumar Patel" : "");
+  const [buyerAadhaar, setBuyerAadhaar] = useState(demoMode ? "9999 8888 7777" : "");
+  const [buyerMobile, setBuyerMobile] = useState(demoMode ? "9876543210" : "");
+  const [buyerAddress, setBuyerAddress] = useState(demoMode ? "Flat 402, Green Avenue, Sangli 416416" : "");
+  const [buyerDeclarationDocNumber, setBuyerDeclarationDocNumber] = useState(demoMode ? "DECL-2026-TR-8842" : "");
+  const [declarationFileName, setDeclarationFileName] = useState("Form_29_30_Self_Declaration_Signed.pdf");
   const [transferType, setTransferType] = useState("Normal Sale / Transfer of Ownership");
   const [declarationAccepted, setDeclarationAccepted] = useState(true);
 
@@ -166,6 +173,8 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
     setBuyerAadhaar("9999 8888 7777");
     setBuyerMobile("9876543210");
     setBuyerAddress("Flat 402, Green Avenue, Sangli 416416");
+    setBuyerDeclarationDocNumber("DECL-2026-TR-8842");
+    setDeclarationFileName("Form_29_30_Self_Declaration_Signed.pdf");
     setTransferType("Normal Sale / Transfer of Ownership");
   }
 
@@ -193,6 +202,7 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
               aadhaar: buyerAadhaar,
               mobile: buyerMobile,
               address: buyerAddress,
+              declarationDocNumber: buyerDeclarationDocNumber,
             },
             payment: {
               amount: 300,
@@ -228,7 +238,11 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
       address: buyerAddress,
       vehicle: `${vehicle.regNumber} (${vehicle.makerModel})`,
       guardian: vehicle.ownerName,
-      documents: ["Form 29 Notice of Transfer", "Form 30 Application for Intimation", "Section 50 Self-Declaration"],
+      documents: [
+        "Form 29 Notice of Transfer",
+        "Form 30 Application for Intimation",
+        `Section 50 Self-Declaration (#${buyerDeclarationDocNumber})`,
+      ],
     };
     saveApplication(localRecord);
 
@@ -261,24 +275,23 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
 
   return (
     <PageShell>
-      {/* Hero Header */}
-      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-10">
-        <div className="mx-auto max-w-5xl px-6">
+      {/* Hero Header - Full Screen Width */}
+      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-8 md:py-10">
+        <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-8 lg:px-12">
           <Badge variant="secondary" className="mb-2 gap-1.5 font-bold">
             <Car size={14} className="text-[#167c74]" /> Form 29 & 30 Online Service
           </Badge>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
+          <h1 className="text-xl font-bold tracking-tight text-[#152321] md:text-2xl">
             Vehicle Transfer & RC Services
           </h1>
-          <p className="mt-1 max-w-2xl text-xs font-medium text-[#5e6f68] md:text-sm">
+          <p className="mt-1 max-w-3xl text-xs font-medium text-[#5e6f68] md:text-sm">
             Apply online for vehicle ownership transfer, NOC endorsement, and instant RC record inspection.
           </p>
-
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-5xl px-6 py-10 space-y-12">
+      {/* Main Content - Full Screen Width */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-8 lg:px-12 space-y-10">
         {/* RC Record Search Section (Loaded on same page) */}
         {(viewMode === "all" || viewMode === "search") && (
           <section className="space-y-3">
@@ -376,7 +389,7 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
                           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
                             <div>
                               <span className="text-[#5e6f68]">Current Registered Owner</span>
-                              <strong className="block text-[#152321]">{vehicle.ownerName}</strong>
+                              <strong className="block text-[#152321] font-mono tracking-wide">{maskOwnerName(vehicle.ownerName)}</strong>
                             </div>
                             <div>
                               <span className="text-[#5e6f68]">Vehicle Class</span>
@@ -418,9 +431,11 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
                         <CardTitle>Transferee (Buyer) Details</CardTitle>
                         <CardDescription>Enter details of the new owner purchasing the vehicle.</CardDescription>
                       </div>
-                      <Button variant="outline" size="sm" onClick={autofillBuyerDemo} className="gap-1.5 text-xs text-[#167c74]">
-                        <Sparkles size={14} /> Auto-fill Demo
-                      </Button>
+                      {demoMode && (
+                        <Button variant="outline" size="sm" onClick={autofillBuyerDemo} className="gap-1.5 text-xs text-[#167c74]">
+                          <Sparkles size={14} /> Auto-fill Demo
+                        </Button>
+                      )}
                     </CardHeader>
                     <CardContent className="p-0 space-y-4">
                       <div className="grid gap-4 sm:grid-cols-2">
@@ -470,6 +485,85 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
                           className="mt-1.5"
                         />
                       </div>
+
+                      {/* Manual Self-Declaration Upload Card */}
+                      <div className="rounded-2xl border border-dashed border-[#9fc8bc] bg-[#f8fbf9] p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <Label className="text-sm font-bold text-[#152321]">
+                              Buyer Statutory Self-Declaration (Manual Upload)
+                            </Label>
+                            <p className="text-[11px] text-[#5e6f68] mt-0.5">
+                              Section 50 Form 29 & 30 declaration document and reference number.
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="w-fit text-[10px] text-[#167c74] border-[#167c74]/30 bg-white font-bold gap-1">
+                            <Upload size={11} /> Manual Upload
+                          </Badge>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <Label htmlFor="b-decl" className="text-xs font-semibold text-[#152321]">
+                              Self-Declaration Document Number
+                            </Label>
+                            <div className="relative mt-1.5">
+                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-[#167c74]" size={16} />
+                              <Input
+                                id="b-decl"
+                                value={buyerDeclarationDocNumber}
+                                onChange={(e) => setBuyerDeclarationDocNumber(e.target.value.toUpperCase())}
+                                placeholder="e.g. DECL-2026-TR-8842"
+                                className="pl-9 font-mono uppercase font-bold text-[#152321] bg-white"
+                              />
+                            </div>
+                            <p className="mt-1 text-[10px] text-[#5e6f68]">
+                              Physical or digital declaration reference serial.
+                            </p>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs font-semibold text-[#152321]">
+                              Upload Signed Document (PDF / Image)
+                            </Label>
+                            <div className="mt-1.5 flex items-center gap-2.5">
+                              <input
+                                type="file"
+                                id="manual-upload-decl"
+                                accept=".pdf,image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setDeclarationFileName(e.target.files[0].name);
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => document.getElementById("manual-upload-decl")?.click()}
+                                className="gap-1.5 bg-white text-xs font-bold text-[#167c74] border-[#cfe3dd] hover:bg-[#ddf3ef] shadow-sm shrink-0"
+                              >
+                                <Upload size={14} /> Choose File
+                              </Button>
+                              <div className="min-w-0 flex-1">
+                                <span className="block truncate text-xs font-semibold text-[#152321]" title={declarationFileName}>
+                                  {declarationFileName}
+                                </span>
+                                <span className="block text-[10px] text-[#5e6f68]">PDF / JPG up to 10MB</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 rounded-lg bg-[#eaf4ef] p-2.5 text-xs text-[#0f7655] font-semibold">
+                          <CheckCircle2 size={15} className="shrink-0 text-[#167c74]" />
+                          <span className="truncate">
+                            Attached file: <strong>{declarationFileName}</strong> (Ref: {buyerDeclarationDocNumber})
+                          </span>
+                        </div>
+                      </div>
                     </CardContent>
                     <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
                       <Button variant="outline" onClick={() => setStep(0)}>
@@ -490,18 +584,29 @@ export function VehicleTransferService({ mode = "all" }: { mode?: "all" | "trans
                       <CardDescription>Confirm details before generating Form 29 & 30 application.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 space-y-5">
-                      <div className="grid gap-4 rounded-xl border border-[#dce8e5] bg-slate-50/70 p-4 text-xs sm:grid-cols-2">
+                      <div className="grid gap-4 rounded-xl border border-[#dce8e5] bg-slate-50/70 p-4 text-xs sm:grid-cols-2 lg:grid-cols-3">
                         <div>
                           <span className="text-[#5e6f68]">Vehicle</span>
                           <strong className="block text-[#152321]">{vehicle.makerModel} ({vehicle.regNumber})</strong>
                         </div>
                         <div>
                           <span className="text-[#5e6f68]">Current Owner (Seller)</span>
-                          <strong className="block text-[#152321]">{vehicle.ownerName}</strong>
+                          <strong className="block text-[#152321] font-mono tracking-wide">{maskOwnerName(vehicle.ownerName)}</strong>
                         </div>
                         <div>
                           <span className="text-[#5e6f68]">New Owner (Buyer)</span>
                           <strong className="block text-[#152321]">{buyerName}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#5e6f68]">Buyer Aadhaar</span>
+                          <strong className="block text-[#152321] font-mono">{buyerAadhaar}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[#5e6f68]">Self-Declaration Doc No (Manual)</span>
+                          <strong className="block text-[#167c74] font-mono">{buyerDeclarationDocNumber}</strong>
+                          <span className="text-[10px] text-[#5e6f68] truncate block" title={declarationFileName}>
+                            📎 {declarationFileName}
+                          </span>
                         </div>
                         <div>
                           <span className="text-[#5e6f68]">RTO Jurisdiction</span>

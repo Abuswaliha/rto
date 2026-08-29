@@ -3,6 +3,7 @@ import {
   Client,
   Databases,
   Functions,
+  ID,
   OAuthProvider,
   Storage,
   Permission,
@@ -16,6 +17,8 @@ const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 export const appwriteDatabaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 export const appwriteDocumentsCollectionId =
   process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID || "wallet-documents";
+export const appwriteDocumentsBucketId =
+  process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_BUCKET_ID;
 export const appwriteApplicationCollectionId =
   process.env.NEXT_PUBLIC_APPWRITE_APPLICATION_COLLECTION_ID || "application";
 export const appwriteServicesCollectionId =
@@ -25,6 +28,9 @@ export const appwriteVehicleCollectionId =
 
 export const client = new Client();
 export const isAppwriteConfigured = Boolean(endpoint && projectId);
+export const isAppwriteStorageConfigured = Boolean(
+  isAppwriteConfigured && appwriteDocumentsBucketId,
+);
 
 if (isAppwriteConfigured) {
   client.setEndpoint(endpoint!).setProject(projectId!);
@@ -34,6 +40,12 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
 export const functions = new Functions(client);
+
+/** Return the active Appwrite user. Throws when no Appwrite session exists. */
+export async function getCurrentAppwriteUser() {
+  requireAppwriteConfiguration();
+  return account.get();
+}
 
 export type ApplicationDocument = {
   $id?: string;
@@ -72,7 +84,7 @@ export type ServiceRecord = {
 };
 
 export type WalletDocument = {
-  type: "Aadhaar" | "PAN" | "Driving Licence" | "RC";
+  type: "Aadhaar" | "PAN" | "Driving Licence" | "RC" | "PUC" | "Insurance" | "Photo" | "Address Proof" | "Name Proof" | "Age Proof" | "Medical Self-Declaration" | "Self-Declaration" | "Self-Declaration (Form 29/30 & Medical)";
   number: string;
   holderName: string;
   status: "active" | "expired" | "pending";
@@ -355,41 +367,127 @@ export async function saveWalletDocument(document: WalletDocument) {
     Permission.delete(Role.user(user.$id)),
   ];
 
-  try {
-    return await databases.createDocument({
+  const existing = await databases.listDocuments({
+    databaseId: appwriteDatabaseId,
+    collectionId: appwriteDocumentsCollectionId,
+    queries: [Query.equal("userId", user.$id), Query.equal("number", document.number)],
+  });
+
+  if (existing.documents[0]) {
+    return databases.updateDocument({
       databaseId: appwriteDatabaseId,
       collectionId: appwriteDocumentsCollectionId,
-      documentId: "unique()",
-      data: { ...document, userid: user.$id },
+      documentId: existing.documents[0].$id,
+      data: { ...document, userId: user.$id },
       permissions,
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.includes("Unknown attribute") || message.includes("Invalid document structure")) {
-      return await databases.createDocument({
-        databaseId: appwriteDatabaseId,
-        collectionId: appwriteDocumentsCollectionId,
-        documentId: "unique()",
-        data: { ...document, userId: user.$id },
-        permissions,
-      });
-    }
-    throw err;
   }
+
+  return databases.createDocument({
+    databaseId: appwriteDatabaseId,
+    collectionId: appwriteDocumentsCollectionId,
+    documentId: "unique()",
+    data: { ...document, userId: user.$id },
+    permissions,
+  });
 }
 
 export async function listWalletDocuments() {
   requireAppwriteConfiguration();
   if (!appwriteDatabaseId || !appwriteDocumentsCollectionId) return [];
   try {
+    const user = await account.get();
     const result = await databases.listDocuments({
       databaseId: appwriteDatabaseId,
       collectionId: appwriteDocumentsCollectionId,
+      queries: [Query.equal("userId", user.$id)],
     });
     return result.documents as unknown as Array<WalletDocument & { $id: string }>;
   } catch (error) {
     console.error("Failed to list wallet documents from Appwrite:", error);
     return [];
+  }
+}
+
+/** Upload a user-selected document to the configured private wallet bucket. */
+export async function uploadWalletFile(file: File) {
+  requireAppwriteConfiguration();
+  if (!appwriteDocumentsBucketId) {
+    throw new Error("NEXT_PUBLIC_APPWRITE_DOCUMENTS_BUCKET_ID is not set.");
+  }
+
+  const user = await account.get();
+  const permissions = [
+    Permission.read(Role.user(user.$id)),
+    Permission.update(Role.user(user.$id)),
+    Permission.delete(Role.user(user.$id)),
+  ];
+
+  return storage.createFile({
+    bucketId: appwriteDocumentsBucketId,
+    fileId: ID.unique(),
+    file,
+    permissions,
+  });
+}
+
+/** List files available to the current Appwrite user in the private wallet bucket. */
+export async function listWalletFiles() {
+  requireAppwriteConfiguration();
+  if (!appwriteDocumentsBucketId) return [];
+
+  const result = await storage.listFiles({
+    bucketId: appwriteDocumentsBucketId,
+  });
+  return result.files;
+}
+
+/** Generate an authenticated view URL for a private wallet file. */
+export function getWalletFileViewUrl(fileId: string) {
+  requireAppwriteConfiguration();
+  if (!appwriteDocumentsBucketId) {
+    throw new Error("NEXT_PUBLIC_APPWRITE_DOCUMENTS_BUCKET_ID is not set.");
+  }
+  return storage.getFileView({ bucketId: appwriteDocumentsBucketId, fileId });
+}
+
+/** Rename an existing private wallet file without changing its access controls. */
+export async function renameWalletFile(fileId: string, name: string) {
+  requireAppwriteConfiguration();
+  if (!appwriteDocumentsBucketId) {
+    throw new Error("NEXT_PUBLIC_APPWRITE_DOCUMENTS_BUCKET_ID is not set.");
+  }
+  await account.get();
+  return storage.updateFile({
+    bucketId: appwriteDocumentsBucketId,
+    fileId,
+    name,
+  });
+}
+
+/** Delete a private wallet file and its matching wallet metadata record. */
+export async function deleteWalletFile(fileId: string) {
+  requireAppwriteConfiguration();
+  if (!appwriteDocumentsBucketId) {
+    throw new Error("NEXT_PUBLIC_APPWRITE_DOCUMENTS_BUCKET_ID is not set.");
+  }
+  const user = await account.get();
+  await storage.deleteFile({ bucketId: appwriteDocumentsBucketId, fileId });
+
+  if (!appwriteDatabaseId || !appwriteDocumentsCollectionId) return;
+  try {
+    const records = await databases.listDocuments({
+      databaseId: appwriteDatabaseId,
+      collectionId: appwriteDocumentsCollectionId,
+      queries: [Query.equal("userId", user.$id), Query.equal("number", fileId)],
+    });
+    await Promise.all(records.documents.map((record) => databases.deleteDocument({
+      databaseId: appwriteDatabaseId!,
+      collectionId: appwriteDocumentsCollectionId!,
+      documentId: record.$id,
+    })));
+  } catch {
+    // The file is already deleted; metadata cleanup will be retried on a later save.
   }
 }
 

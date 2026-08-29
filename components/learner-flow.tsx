@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "./safe-link";
 import { useLanguage } from "./language-provider";
 import { useDemoMode } from "./demo-mode-provider";
@@ -18,11 +18,11 @@ import {
   FileText,
   Landmark,
   Loader2,
-  LockKeyhole,
   ShieldCheck,
   Sparkles,
   UploadCloud,
   UserCheck,
+  WalletCards,
 } from "lucide-react";
 import {
   Card,
@@ -43,11 +43,15 @@ import {
   newApplicationId,
   newPaymentReference,
   saveApplication,
-  hasSession,
 } from "@/lib/storage";
 import {
   isAppwriteConfigured,
+  isAppwriteStorageConfigured,
+  listWalletDocuments,
+  listWalletFiles,
   saveApplicationRecord,
+  saveWalletDocument,
+  uploadWalletFile,
 } from "@/lib/appwrite";
 import { downloadApplicationPdf } from "@/lib/demo-pdf";
 
@@ -57,6 +61,7 @@ interface VehicleClassOption {
   name: string;
   desc: string;
   icon: string;
+  image: string;
   badge: string;
   fee: number;
 }
@@ -68,6 +73,7 @@ const VEHICLE_CLASSES: VehicleClassOption[] = [
     name: "Motorcycle Without Gear",
     desc: "Scooters, Mopeds, Electric 2-Wheelers (e.g. Activa, Jupiter, Ola S1)",
     icon: "🛵",
+    image: "/assets/electric-motorbike.gif",
     badge: "Two Wheeler (Non-Geared)",
     fee: 150,
   },
@@ -77,6 +83,7 @@ const VEHICLE_CLASSES: VehicleClassOption[] = [
     name: "Motorcycle With Gear",
     desc: "All Geared Motorcycles, Commuter & Sports Bikes (e.g. Splendor, Pulsar, RE)",
     icon: "🏍️",
+    image: "/assets/motorcycle.gif",
     badge: "Two Wheeler (Geared)",
     fee: 150,
   },
@@ -86,15 +93,17 @@ const VEHICLE_CLASSES: VehicleClassOption[] = [
     name: "Light Motor Vehicle",
     desc: "Cars, Jeeps, Sedans, Hatchbacks, SUVs, Light Taxis",
     icon: "🚗",
+    image: "/assets/car.gif",
     badge: "Four Wheeler (Light)",
     fee: 150,
   },
   {
     id: "hmv",
     code: "HMV / Commercial",
-    name: "Heavy / Commercial Vehicle (Big Vehicle)",
+    name: "Heavy / Commercial Vehicle",
     desc: "Heavy Goods Transport, Multi-Axle Trucks, Passenger Buses",
     icon: "🚛",
+    image: "/assets/delivery-truck.gif",
     badge: "Commercial / Heavy",
     fee: 250,
   },
@@ -123,11 +132,17 @@ const RTO_OFFICES = [
   "MH-02 Mumbai West RTO",
 ];
 
+type ApplicationDocumentAttachment = {
+  id: string;
+  name: string;
+  detail: string;
+  source: "Wallet" | "Manual upload" | "DigiLocker";
+};
+
 export function LearnerFlow() {
   const router = useRouter();
   const { language } = useLanguage();
   const { enabled: demoMode } = useDemoMode();
-  const [started, setStarted] = useState(false);
   const [step, setStep] = useState<number>(0);
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -157,8 +172,14 @@ export function LearnerFlow() {
   const [selectedClasses, setSelectedClasses] = useState<string[]>(["mcwg", "lmv"]);
 
   // Step 4: Document Verification (DigiLocker vs Manual)
-  const [docMethod, setDocMethod] = useState<"digilocker" | "manual">("digilocker");
+  const [docMethod, setDocMethod] = useState<"wallet" | "digilocker" | "manual">("wallet");
   const [manualDocsUploaded, setManualDocsUploaded] = useState(false);
+  const [manualDocumentType, setManualDocumentType] = useState<"Photo" | "Address Proof" | "Name Proof" | "Age Proof" | "Medical Self-Declaration">("Photo");
+  const [walletDocuments, setWalletDocuments] = useState<Array<{ id: string; name: string; detail: string }>>([]);
+  const [attachedDocuments, setAttachedDocuments] = useState<ApplicationDocumentAttachment[]>([]);
+  const [documentFetchStatus, setDocumentFetchStatus] = useState("");
+  const [manualDocumentNames, setManualDocumentNames] = useState<string[]>([]);
+  const manualUploadRef = useRef<HTMLInputElement>(null);
 
   // Step 5: Test Date & Time Slot + RTO
   const [rtoOffice, setRtoOffice] = useState("MH-10 Sangli RTO");
@@ -190,21 +211,15 @@ export function LearnerFlow() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat(locale, { style: "currency", currency: "INR" }).format(amount);
 
-  function beginApplication() {
-    if (!hasSession()) {
-      router.push("/login?next=/apply/learner-licence");
-      return;
-    }
-    setStarted(true);
-  }
-
   function continueToDeclaration() {
-    if (!demoMode) {
-      setError("Demo details are unavailable while Demo Mode is off. Turn Demo Mode on to use this fictional prototype flow.");
+    const aadhaarIsValid = /^\d{4}\s?\d{4}\s?\d{4}$/.test(aadhaarNumber);
+    const panIsValid = /^[A-Z]{5}\d{4}[A-Z]$/.test(panNumber);
+    if (demoMode && (!/^9999\s?8888\s?7777$/.test(aadhaarNumber) || !/^ABCDE1234F$/.test(panNumber))) {
+      setError("Use the fictional examples shown: Aadhaar 9999 8888 7777 and PAN ABCDE1234F. Select Fill demo details to add them.");
       return;
     }
-    if (!/^9999\s?8888\s?7777$/.test(aadhaarNumber) || !/^ABCDE1234F$/.test(panNumber)) {
-      setError("Use the fictional examples shown: Aadhaar 9999 8888 7777 and PAN ABCDE1234F. Select Fill demo details to add them.");
+    if (!demoMode && (!aadhaarIsValid || !panIsValid)) {
+      setError("Enter a valid 12-digit Aadhaar number and PAN in ABCDE1234F format to continue.");
       return;
     }
     setError("");
@@ -232,6 +247,81 @@ export function LearnerFlow() {
     } else {
       setSelectedClasses([...selectedClasses, id]);
     }
+  }
+
+  async function fetchWalletDocuments() {
+    if (!isAppwriteConfigured) {
+      setDocumentFetchStatus("Connect Appwrite to fetch documents from your wallet.");
+      return;
+    }
+    setDocumentFetchStatus("Fetching documents from your Appwrite wallet…");
+    try {
+      const [records, files] = await Promise.all([
+        listWalletDocuments(),
+        isAppwriteStorageConfigured ? listWalletFiles() : Promise.resolve([]),
+      ]);
+      setWalletDocuments([
+        ...records.map((document) => ({ id: document.$id, name: document.type, detail: document.number })),
+        ...files.map((file) => ({ id: file.$id, name: file.name, detail: file.mimeType || "Wallet file" })),
+      ]);
+      setDocumentFetchStatus(records.length || files.length ? "Wallet documents fetched." : "No wallet documents found for this Appwrite account.");
+    } catch {
+      setDocumentFetchStatus("Could not fetch wallet documents. Sign in with Google and try again.");
+    }
+  }
+
+  function fetchDigiLockerDocuments() {
+    setDocumentFetchStatus("Demo DigiLocker documents fetched. No government service was contacted.");
+  }
+
+  async function uploadManualDocuments(files: FileList | null) {
+    const selected = Array.from(files || []);
+    if (!selected.length) return;
+    if (selected.some((file) => file.size > 2 * 1024 * 1024 || (!file.type.startsWith("image/") && file.type !== "application/pdf"))) {
+      setDocumentFetchStatus("Choose PDF or image files smaller than 2 MB.");
+      return;
+    }
+    if (!isAppwriteStorageConfigured) {
+      setDocumentFetchStatus("Manual upload needs the configured Appwrite document bucket.");
+      return;
+    }
+    setDocumentFetchStatus("Uploading selected documents to your private Appwrite wallet…");
+    try {
+      const uploadedFiles = await Promise.all(selected.map((file) => {
+        const typedFile = new File([file], `${manualDocumentType} - ${file.name}`, { type: file.type });
+        return uploadWalletFile(typedFile);
+      }));
+      await Promise.all(uploadedFiles.map((file) => saveWalletDocument({
+        type: manualDocumentType,
+        number: file.$id,
+        holderName: fullName || "LL applicant",
+        status: "active",
+      })));
+      setManualDocumentNames(selected.map((file) => file.name));
+      setAttachedDocuments((current) => [
+        ...current,
+        ...uploadedFiles.map((file) => ({
+          id: file.$id,
+          name: manualDocumentType,
+          detail: file.name,
+          source: "Manual upload" as const,
+        })).filter((item) => !current.some((document) => document.id === item.id)),
+      ]);
+      setManualDocsUploaded(true);
+      setDocumentFetchStatus("Documents uploaded to Appwrite and attached to this application.");
+    } catch {
+      setDocumentFetchStatus("Could not upload documents. Sign in with Google and check bucket permissions.");
+    }
+  }
+
+  function attachWalletDocument(document: { id: string; name: string; detail: string }) {
+    setAttachedDocuments((current) => current.some((item) => item.id === document.id)
+      ? current
+      : [...current, { ...document, source: "Wallet" }]);
+  }
+
+  function removeAttachedDocument(id: string) {
+    setAttachedDocuments((current) => current.filter((document) => document.id !== id));
   }
 
   const selectedCodes = VEHICLE_CLASSES.filter((v) => selectedClasses.includes(v.id)).map(
@@ -333,7 +423,9 @@ export function LearnerFlow() {
       vehicle: selectedCodes.join(" / "),
       medicalStatus: "Fit (Form 1 Self-Declaration Attested)",
       organDonation: organDonation ? "Yes (Pledged for Road Safety)" : "No",
-      documents: ["Aadhaar eKYC", "PAN Record", "Form 1 Medical Declaration", "Age Proof"],
+      documents: attachedDocuments.length > 0
+        ? attachedDocuments.map((document) => `${document.name} (${document.source})`)
+        : ["Aadhaar eKYC", "PAN Record", "Form 1 Medical Declaration", "Age Proof"],
     };
 
     saveApplication(applicationRecord);
@@ -346,40 +438,31 @@ export function LearnerFlow() {
 
   return (
     <PageShell>
-      {/* Hero Header */}
-      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-10">
-        <div className="mx-auto max-w-5xl px-6">
+      {/* Hero Header - Full Screen Width */}
+      <section className="border-b border-[#dce8e5] bg-gradient-to-br from-[#f7fbfa] via-white to-[#edf7f4] py-8 md:py-10">
+        <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-8 lg:px-12">
           <Badge variant="secondary" className="mb-2 gap-1.5 font-bold">
             <FileText size={14} className="text-[#167c74]" /> Form 2 · Ministry of Road Transport & Highways
           </Badge>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#152321] md:text-3xl">
+          <h1 className="text-xl font-bold tracking-tight text-[#152321] md:text-2xl">
             Learner Licence (LL) Application
           </h1>
-          <p className="mt-1 max-w-2xl text-xs font-medium text-[#5e6f68] md:text-sm">
-            Review what you need first, then complete five clear stages. This is a fictional demonstration—no government system is contacted.
+          <p className="mt-1 max-w-3xl text-xs font-medium text-[#5e6f68] md:text-sm">
+            Complete four clear stages. Instant slot allocation and statutory verification.
           </p>
         </div>
       </section>
 
-      {/* Main Content Area */}
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        {!submittedApp && !started ? (
-          <Card className="space-y-6 p-6 md:p-8">
-            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#edf7f4] text-[#167c74]"><FileCheck2 size={21} /></span><div><p className="text-xs font-bold uppercase tracking-wider text-[#167c74]">Step 1 of 5</p><CardTitle>Before you begin</CardTitle><CardDescription>Check the requirements before sharing any information.</CardDescription></div></div>
-            <div className="grid gap-3 text-sm sm:grid-cols-2"><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Eligibility</strong><span className="text-xs text-[#5e6f68]">You must be old enough for the vehicle category you choose and able to make the fitness declaration.</span></div><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Documents</strong><span className="text-xs text-[#5e6f68]">Demo identity details, age or address proof, and a Form 1 declaration. Manual uploads accept PDF or JPG, up to 2 MB each.</span></div><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Fee and time</strong><span className="text-xs text-[#5e6f68]">₹170 demo checkout: ₹150 application fee and ₹20 test fee. Allow about 8 minutes.</span></div><div className="rounded-xl border border-[#dce8e5] p-4"><strong className="block text-[#152321]">Need help?</strong><span className="text-xs text-[#5e6f68]">You can go back at any point. Your demo progress is saved on this device after you sign in.</span></div></div>
-            <div className="flex gap-3 rounded-xl border border-[#cfe3dd] bg-[#edf7f4] p-4 text-xs text-[#40564f]"><LockKeyhole size={18} className="shrink-0 text-[#167c74]"/><p className="m-0"><strong>Privacy notice:</strong> This prototype uses fictional demo data only. Do not enter real Aadhaar or PAN details; nothing is sent to a government database.</p></div>
-            <CardFooter className="justify-end border-t border-slate-100 p-0 pt-5"><Button onClick={beginApplication} className="gap-2">Begin application <ArrowRight size={16} /></Button></CardFooter>
-          </Card>
-        ) : !submittedApp ? (
+      {/* Main Content Area - Full Screen Width */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-8 lg:px-12 sm:py-8">
+        {!submittedApp ? (
           <div className="space-y-8">
-            {/* Five-stage journey: overview, identity, combined declaration/category, documents and slot. */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-              <Card className="border-[#cfe3dd] bg-[#edf7f4] p-3.5 text-[#167c74]"><span className="text-[10px] font-bold uppercase tracking-wider">Step 1</span><strong className="mt-1 block text-xs text-[#152321]">Before you begin</strong><span className="text-[10px] text-[#5e6f68]">Requirements checked</span></Card>
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
               {[
-                { id: 0, title: "2. Identity details", sub: "Demo Aadhaar & PAN" },
-                { id: 1, title: "3. Fitness & vehicles", sub: "Declaration and classes" },
-                { id: 2, title: "4. Documents", sub: "Add proof" },
-                { id: 3, title: "5. Slot & payment", sub: "Test date & ₹170" },
+                { id: 0, title: "1. Identity details", sub: "Demo Aadhaar & PAN" },
+                { id: 1, title: "2. Fitness & vehicles", sub: "Declaration and classes" },
+                { id: 2, title: "3. Documents", sub: "Add proof" },
+                { id: 3, title: "4. Slot & payment", sub: "Test date & ₹170" },
               ].map((s) => (
                 <Card
                   key={s.id}
@@ -393,7 +476,7 @@ export function LearnerFlow() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider">
-                      Step {s.id + 2}
+                      Step {s.id + 1}
                     </span>
                     {step > s.id && <Check size={14} className="text-[#167c74]" />}
                   </div>
@@ -412,12 +495,12 @@ export function LearnerFlow() {
 
             {/* STEP 2: demo identity details */}
             {step === 0 && (
-              <Card className="p-6 space-y-6">
+              <Card className="w-full space-y-6 p-4 sm:p-6">
                 <CardHeader className="p-0 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Step 2: Demo identity details</CardTitle>
-                    <CardDescription>
-                      We use these fictional details only to prefill this demo application. No government database is contacted.
+                  <CardTitle>Step 1: Identity details</CardTitle>
+                  <CardDescription>
+                      {demoMode ? "Use fictional details to prefill this demo application. No government database is contacted." : "Enter your identity references to continue the application."}
                     </CardDescription>
                   </div>
                   {demoMode && <Button
@@ -441,7 +524,7 @@ export function LearnerFlow() {
                         placeholder="9999 8888 7777"
                         aria-describedby="aadhaar-help"
                       />
-                      <p id="aadhaar-help" className="mt-1 text-[11px] text-[#5e6f68]"><strong>Why we need this:</strong> it demonstrates how a form can prefill basic details. Example: 9999 8888 7777. Use the demo number only; select Fill demo details if you want to use the example.</p>
+                      <p id="aadhaar-help" className="mt-1 text-[11px] text-[#5e6f68]">{demoMode ? <><strong>Why we need this:</strong> it demonstrates how a form can prefill basic details. Example: 9999 8888 7777.</> : "Enter a 12-digit Aadhaar reference in the format 1234 5678 9012."}</p>
                     </div>
                     <div>
                       <Label htmlFor="pan">PAN Card Number</Label>
@@ -453,7 +536,7 @@ export function LearnerFlow() {
                         placeholder="ABCDE1234F"
                         aria-describedby="pan-help"
                       />
-                      <p id="pan-help" className="mt-1 text-[11px] text-[#5e6f68]"><strong>Why we need this:</strong> it is a second demo reference. Example: ABCDE1234F. Do not enter a real PAN; select Fill demo details if you want to use the example.</p>
+                      <p id="pan-help" className="mt-1 text-[11px] text-[#5e6f68]">{demoMode ? <><strong>Why we need this:</strong> it is a second demo reference. Example: ABCDE1234F.</> : "Enter PAN in ABCDE1234F format."}</p>
                     </div>
                   </div>
 
@@ -490,7 +573,10 @@ export function LearnerFlow() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="flex justify-end p-0 pt-4 border-t border-slate-100">
+                <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
+                  <Button variant="outline" onClick={() => router.push("/services")}>
+                    <ArrowLeft size={16} className="mr-2" /> Back
+                  </Button>
                   <Button onClick={continueToDeclaration} className="gap-2">
                     Continue to fitness declaration <ArrowRight size={16} />
                   </Button>
@@ -500,74 +586,80 @@ export function LearnerFlow() {
 
             {/* STEP 2: Medical Disability Checklist & Form 1 Self-Declaration */}
             {step === 1 && (
-              <Card className="p-6 space-y-6">
+              <Card className="w-full space-y-6 p-4 sm:p-6">
                 <CardHeader className="p-0">
                   <CardTitle>Step 3: Fitness declaration & vehicle categories</CardTitle>
                   <CardDescription>
                     Answer the fitness questions, then choose the vehicle types you want to learn in this single step.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0 space-y-4">
-                  <div className="space-y-3">
-                    {[
-                      {
-                        id: "epilepsy",
-                        label: "Do you suffer from epilepsy, sudden attacks of giddiness, or fainting spells?",
-                        val: noEpilepsy,
-                        set: setNoEpilepsy,
-                        note: "Must be 'No' for safe driving fitness",
-                      },
-                      {
-                        id: "vision",
-                        label: "Are you able to distinguish pigmentary colors (Red & Green) and read a vehicle plate at 25m distance?",
-                        val: normalVision,
-                        set: setNormalVision,
-                        note: "Normal visual acuity required",
-                      },
-                      {
-                        id: "disability",
-                        label: "Do you have any physical defect, loss of limbs, or muscular weakness impairing vehicle control?",
-                        val: noDisability,
-                        set: setNoDisability,
-                        note: "Validates motor driving capability",
-                      },
-                      {
-                        id: "hearing",
-                        label: "Do you suffer from severe deafness or night blindness?",
-                        val: normalHearing,
-                        set: setNormalHearing,
-                        note: "Auditory alertness declaration",
-                      },
-                      {
-                        id: "organ",
-                        label: "Organ Donation Pledge: In the event of fatal road accident, I wish to donate my organs.",
-                        val: organDonation,
-                        set: setOrganDonation,
-                        note: "Endorsed on Learner & Smart Card DL",
-                      },
-                    ].map((item, idx) => (
-                      <label
-                        key={item.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#cfe3dd] bg-[#f9fbfb] p-3.5 transition hover:bg-[#edf7f4]"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={item.val}
-                          onChange={(e) => item.set(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded accent-[#167c74]"
-                        />
-                        <div className="text-xs">
-                          <strong className="block text-[#152321]">
-                            {idx + 1}. {item.label}
-                          </strong>
-                          <span className="text-[#5e6f68]">{item.note}</span>
-                        </div>
-                      </label>
-                    ))}
+                <CardContent className="p-0 space-y-3.5">
+                  {/* Fitness Questions in 2/3 Column Compact Grid */}
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#587269] block mb-2">
+                      Medical Fitness Questions (Form 1 Statutory Declaration):
+                    </span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                      {[
+                        {
+                          id: "epilepsy",
+                          label: "Epilepsy / Giddiness / Fainting",
+                          val: noEpilepsy,
+                          set: setNoEpilepsy,
+                          note: "Free from sudden fainting attacks",
+                        },
+                        {
+                          id: "vision",
+                          label: "Visual Acuity & Color Vision",
+                          val: normalVision,
+                          set: setNormalVision,
+                          note: "Normal 25m distance & Red/Green vision",
+                        },
+                        {
+                          id: "disability",
+                          label: "Physical Motor Control",
+                          val: noDisability,
+                          set: setNoDisability,
+                          note: "No motor disability impairing driving",
+                        },
+                        {
+                          id: "hearing",
+                          label: "Auditory Alertness & Night Vision",
+                          val: normalHearing,
+                          set: setNormalHearing,
+                          note: "Normal hearing & night alertness",
+                        },
+                        {
+                          id: "organ",
+                          label: "Organ Donation Pledge",
+                          val: organDonation,
+                          set: setOrganDonation,
+                          note: "Pledge organ donation in emergency",
+                        },
+                      ].map((item, idx) => (
+                        <label
+                          key={item.id}
+                          className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[#cfe3dd] bg-[#f9fbfb] p-2.5 transition hover:bg-[#edf7f4]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={item.val}
+                            onChange={(e) => item.set(e.target.checked)}
+                            className="mt-0.5 h-3.5 w-3.5 rounded accent-[#167c74]"
+                          />
+                          <div className="text-[11px] min-w-0">
+                            <strong className="block text-[#152321] truncate font-bold">
+                              {idx + 1}. {item.label}
+                            </strong>
+                            <span className="text-[10px] text-[#5e6f68] block mt-0.5 truncate">{item.note}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="rounded-xl border border-[#cfe3dd] bg-white p-4">
-                    <label className="flex cursor-pointer items-center gap-3 text-xs font-bold text-[#152321]">
+                  <div className="rounded-xl border border-[#cfe3dd] bg-white p-2.5">
+                    <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold text-[#152321]">
                       <input
                         type="checkbox"
                         checked={medicalDeclaration}
@@ -579,16 +671,73 @@ export function LearnerFlow() {
                       </span>
                     </label>
                   </div>
-                  <div className="border-t border-slate-100 pt-5">
-                    <h3 className="text-sm font-extrabold text-[#152321]">Choose vehicle categories</h3>
-                    <p className="mt-1 text-xs text-[#5e6f68]">Choose one or more categories for this demo Learner Licence.</p>
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                  {/* Vehicle Categories - Compact Height */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div>
+                        <h3 className="text-xs font-extrabold text-[#152321] uppercase tracking-wider">Choose vehicle categories</h3>
+                        <p className="text-[11px] text-[#5e6f68]">Select one or more classes to endorse on your Learner Licence.</p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] text-[#167c74] border-[#167c74]/30 bg-[#ddf3ef]/40 font-bold py-0.5">
+                        Multi-class Enabled
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
                       {VEHICLE_CLASSES.map((vc) => {
                         const isSelected = selectedClasses.includes(vc.id);
-                        return <button key={vc.id} type="button" onClick={() => toggleVehicleClass(vc.id)} className={`rounded-xl border p-3 text-left transition ${isSelected ? "border-[#167c74] bg-[#edf7f4] ring-2 ring-[#167c74]/20" : "border-[#dce8e5] bg-white hover:border-[#167c74]"}`}><span className="text-xl">{vc.icon}</span><strong className="ml-2 text-xs text-[#152321]">{vc.name} ({vc.code})</strong><span className="mt-1 block text-[11px] text-[#5e6f68]">{vc.desc}</span></button>;
+                        return (
+                          <button
+                            key={vc.id}
+                            type="button"
+                            onClick={() => toggleVehicleClass(vc.id)}
+                            className={`group relative flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-200 ${
+                              isSelected
+                                ? "border-[#167c74] bg-[#edf7f4] ring-2 ring-[#167c74]/30 shadow-xs"
+                                : "border-[#dce8e5] bg-white hover:border-[#167c74]/60 hover:shadow-xs"
+                            }`}
+                          >
+                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white p-0.5 border border-slate-100 flex items-center justify-center shadow-xs">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={vc.image}
+                                alt={vc.name}
+                                className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="rounded bg-[#152923] px-1.5 py-0.5 font-mono text-[9px] font-black text-[#72c9b7] tracking-wider">
+                                  {vc.code}
+                                </span>
+                                <span
+                                  className={`flex h-4 w-4 items-center justify-center rounded border text-[9px] font-black ${
+                                    isSelected
+                                      ? "border-[#167c74] bg-[#167c74] text-white"
+                                      : "border-slate-300 bg-white text-transparent"
+                                  }`}
+                                >
+                                  ✓
+                                </span>
+                              </div>
+                              <strong className="mt-1 block text-xs font-bold text-[#152321] truncate group-hover:text-[#167c74]">
+                                {vc.name}
+                              </strong>
+                              <span className="block text-[10px] text-[#5e6f68] truncate mt-0.5">
+                                {vc.desc}
+                              </span>
+                            </div>
+                          </button>
+                        );
                       })}
                     </div>
-                    <p className="mt-3 text-xs font-bold text-[#0d5c45]">Selected: {VEHICLE_CLASSES.filter((vehicle) => selectedClasses.includes(vehicle.id)).map((vehicle) => vehicle.code).join(", ")} · Flat demo fee: ₹170</p>
+
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#eaf4ef] px-3 py-1.5 text-xs text-[#0f7655] font-bold">
+                      <span className="text-[11px]">Selected: {VEHICLE_CLASSES.filter((vehicle) => selectedClasses.includes(vehicle.id)).map((vehicle) => vehicle.code).join(", ")}</span>
+                      <span className="font-mono text-[11px]">Flat demo fee: ₹170.00</span>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between p-0 pt-4 border-t border-slate-100">
@@ -606,23 +755,45 @@ export function LearnerFlow() {
               </Card>
             )}
 
-            {/* STEP 4: Document Verification (DigiLocker vs Manual) */}
+            {/* STEP 3: Document sources */}
             {step === 2 && (
-              <Card className="p-6 space-y-6">
+              <Card className="w-full space-y-6 p-4 sm:p-6">
                 <CardHeader className="p-0">
-                  <CardTitle>Step 4: Add supporting documents</CardTitle>
+                  <CardTitle>Step 3: Add supporting documents</CardTitle>
                   <CardDescription>
-                    Choose a demo prefill or add fictional proof files yourself. Neither option connects to DigiLocker or another government service.
+                    Fetch eligible records from your private wallet, use the demo DigiLocker fetch, or manually upload proof documents.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 space-y-5">
-                  <div className="flex gap-2">
+                  <div className="rounded-2xl border border-[#dce8e5] bg-[#fbfdfc] p-4">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#587269]">Required for this application</p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {[
+                        { type: "Photo", title: "Applicant photograph", detail: "Recent clear face photo" },
+                        { type: "Address Proof", title: "Address proof", detail: "Aadhaar, utility bill, or bank statement" },
+                        { type: "Name Proof", title: "Name / identity proof", detail: "PAN, Aadhaar, passport, or school record" },
+                      ].map((item) => (
+                        <div key={item.type} className="rounded-xl border border-[#dce8e5] bg-white p-3 text-xs">
+                          <strong className="block text-[#152321]">{item.title}</strong>
+                          <span className="mt-1 block text-[#5e6f68]">{item.detail}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={docMethod === "wallet" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDocMethod("wallet")}
+                    >
+                      <WalletCards size={15} /> Fetch from wallet
+                    </Button>
                     <Button
                       variant={docMethod === "digilocker" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setDocMethod("digilocker")}
                     >
-                      Use demo document prefill
+                      Fetch DigiLocker documents
                     </Button>
                     <Button
                       variant={docMethod === "manual" ? "default" : "outline"}
@@ -633,7 +804,27 @@ export function LearnerFlow() {
                     </Button>
                   </div>
 
-                  {docMethod === "digilocker" ? (
+                  <div className="rounded-2xl border border-[#cfe3dd] bg-[#f8fbf9] p-4">
+                    <div className="flex items-center justify-between gap-3"><div><strong className="block text-sm text-[#152321]">Attached to this application</strong><span className="text-xs text-[#5e6f68]">Add from Wallet or use the manual upload option.</span></div><Badge variant="success">{attachedDocuments.length} attached</Badge></div>
+                    {attachedDocuments.length > 0 ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{attachedDocuments.map((document) => <div key={document.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#cfe3dd] bg-white p-3 text-xs"><span className="min-w-0"><strong className="block truncate text-[#152321]">{document.name}</strong><small className="block truncate text-[#5e6f68]">{document.detail} · {document.source}</small></span><Button type="button" size="sm" variant="ghost" className="shrink-0 text-red-700 hover:bg-red-50 hover:text-red-700" onClick={() => removeAttachedDocument(document.id)}>Remove</Button></div>)}</div> : <p className="mt-3 text-xs text-[#687d75]">No documents attached yet.</p>}
+                  </div>
+
+                  {documentFetchStatus && <p className="rounded-xl border border-[#cfe3dd] bg-[#f2f8f6] px-3 py-2 text-xs font-medium text-[#405e54]" role="status">{documentFetchStatus}</p>}
+
+                  {docMethod === "wallet" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#167c74] text-white"><WalletCards size={20} /></div><div><strong className="block text-sm text-[#0d5c45]">Your Appwrite document wallet</strong><span className="text-xs text-[#5e6f68]">Fetch documents already saved to your authenticated account.</span></div></div>
+                          <Button size="sm" onClick={fetchWalletDocuments}>Fetch documents</Button>
+                        </div>
+                      </div>
+                      {walletDocuments.length > 0 && <div className="grid gap-3 sm:grid-cols-2">{walletDocuments.map((doc) => {
+                        const attached = attachedDocuments.some((item) => item.id === doc.id);
+                        return <div key={doc.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#cfe3dd] bg-white p-3.5 text-xs"><div className="min-w-0"><strong className="block truncate text-[#152321]">{doc.name}</strong><span className="block truncate text-[#5e6f68]">{doc.detail}</span></div><Button type="button" size="sm" variant={attached ? "secondary" : "outline"} disabled={attached} onClick={() => attachWalletDocument(doc)}>{attached ? "Added" : "Add"}</Button></div>;
+                      })}</div>}
+                    </div>
+                  ) : docMethod === "digilocker" ? (
                     <div className="space-y-4">
                       <div className="rounded-2xl border border-[#cfe3dd] bg-[#edf7f4] p-5">
                         <div className="flex items-center justify-between">
@@ -643,23 +834,24 @@ export function LearnerFlow() {
                             </div>
                             <div>
                               <strong className="block text-sm font-bold text-[#0d5c45]">
-                                Demo documents ready
+                                DigiLocker demo documents
                               </strong>
                               <span className="text-xs text-[#5e6f68]">
-                                Identity, age and address proof fetched automatically.
+                                Fetch a fictional identity, age and address proof set.
                               </span>
                             </div>
                           </div>
-                          <Badge variant="success">Verified ✓</Badge>
+                          <Button size="sm" onClick={fetchDigiLockerDocuments}>Fetch documents</Button>
                         </div>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      {documentFetchStatus.startsWith("Demo DigiLocker") && <div className="grid gap-3 sm:grid-cols-2">
                         {[
-                          { title: "Aadhaar eKYC Certificate", num: aadhaarNumber, authority: "UIDAI" },
-                          { title: "PAN Verification Record", num: panNumber, authority: "Income Tax Dept" },
-                          { title: "Age Proof (10th Certificate)", num: "CERT-2016-8921", authority: "State Board" },
-                          { title: "Form 1 Medical Self-Declaration", num: "MED-FIT-2026", authority: "Smart RTO" },
+                          { title: "Applicant Photograph", num: "PHOTO-DEMO-2026", authority: "Demo DigiLocker", type: "Photo" },
+                          { title: "Aadhaar eKYC Certificate", num: aadhaarNumber, authority: "UIDAI", type: "Address & name proof" },
+                          { title: "PAN Verification Record", num: panNumber, authority: "Income Tax Dept", type: "Name proof" },
+                          { title: "Age Proof (10th Certificate)", num: "CERT-2016-8921", authority: "State Board", type: "Age proof" },
+                          { title: "Form 1 Medical Self-Declaration", num: "MED-FIT-2026", authority: "Smart RTO", type: "Medical declaration" },
                         ].map((doc) => (
                           <div
                             key={doc.title}
@@ -668,30 +860,51 @@ export function LearnerFlow() {
                             <div>
                               <strong className="block text-[#152321]">{doc.title}</strong>
                               <span className="font-mono text-[#5e6f68]">{doc.num} · {doc.authority}</span>
+                              <span className="mt-1 inline-flex rounded-full bg-[#eaf4ef] px-2 py-0.5 text-[10px] font-bold text-[#0f7655]">{doc.type}</span>
                             </div>
                             <CheckCircle2 size={18} className="text-[#0f7655]" />
                           </div>
                         ))}
-                      </div>
+                      </div>}
                     </div>
                   ) : (
                     <div className="space-y-4">
                       <div className="rounded-2xl border border-dashed border-[#167c74] bg-[#f8fbf9] p-6 text-center">
                         <UploadCloud className="mx-auto text-[#167c74]" size={36} />
                           <strong className="mt-2 block text-sm text-[#152321]">
-                          Upload demo proof documents
+                          Upload proof documents
                         </strong>
                         <p className="text-xs text-[#5e6f68]">
-                          Supported formats: PDF or JPG, up to 2 MB each. Example: a readable address proof, age proof, and Form 1.
+                          Supported formats: PDF or image, up to 2 MB each. Files are uploaded to your private Appwrite wallet.
                         </p>
-                        <p className="mt-2 text-[11px] text-[#5e6f68]">If a file is rejected, check its format and size, then choose Select Files again. You can switch back to demo prefill at any time.</p>
+                        <p className="mt-2 text-[11px] text-[#5e6f68]">Choose one or more files. You need an authenticated Appwrite account and bucket access.</p>
+                        <div className="mx-auto mt-4 grid max-w-md grid-cols-1 gap-2 text-left sm:grid-cols-3">
+                          {[
+                            { type: "Photo" as const, label: "Applicant photo" },
+                            { type: "Address Proof" as const, label: "Address proof" },
+                            { type: "Name Proof" as const, label: "Name proof" },
+                            { type: "Age Proof" as const, label: "Age proof" },
+                            { type: "Medical Self-Declaration" as const, label: "Medical declaration" },
+                          ].map((item) => (
+                            <button
+                              key={item.type}
+                              type="button"
+                              onClick={() => setManualDocumentType(item.type)}
+                              className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${manualDocumentType === item.type ? "border-[#167c74] bg-[#167c74] text-white" : "border-[#cfe3dd] bg-white text-[#405e54] hover:border-[#167c74]"}`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
                         <Button
                           size="sm"
                           className="mt-4 gap-1.5"
-                          onClick={() => setManualDocsUploaded(true)}
+                          onClick={() => manualUploadRef.current?.click()}
                         >
-                          {manualDocsUploaded ? "Documents Attached ✓" : "Select Files"}
+                          {manualDocsUploaded ? "Add more files" : "Select files"}
                         </Button>
+                        <input ref={manualUploadRef} type="file" className="sr-only" accept="application/pdf,image/*" multiple onChange={(event) => uploadManualDocuments(event.target.files)} />
+                        {manualDocumentNames.length > 0 && <p className="mt-3 text-xs font-bold text-[#0d5c45]">Attached as {manualDocumentType}: {manualDocumentNames.join(", ")}</p>}
                       </div>
                     </div>
                   )}
@@ -709,7 +922,7 @@ export function LearnerFlow() {
 
             {/* STEP 5: Review, Select Test Date & Slot, and Pay (₹170) */}
             {step === 3 && (
-              <Card className="p-6 space-y-6">
+              <Card className="w-full space-y-6 p-4 sm:p-6">
                 <CardHeader className="p-0">
                   <CardTitle>Step 5: Choose a test time and review payment</CardTitle>
                   <CardDescription>
@@ -880,7 +1093,7 @@ export function LearnerFlow() {
           </div>
         ) : (
           /* Success Screen */
-          <Card className="p-8 text-center space-y-6">
+          <Card className="w-full space-y-6 p-5 text-center sm:p-8">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#e7f4ed] text-[#0d5c45]">
               <CheckCircle2 size={40} />
             </div>
@@ -913,9 +1126,12 @@ export function LearnerFlow() {
             </div>
 
             {syncStatus === "appwrite" ? (
-              <p className="text-xs font-bold text-[#0d5c45]" role="status">Saved to Appwrite. This application is available in Dashboard and Tracking.</p>
+              <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl border border-[#cfe3dd] bg-[#edf7f4] px-4 py-3 text-left text-xs" role="status">
+                <span className="font-bold text-[#0d5c45]">✓ Saved on this device</span>
+                <span className="font-bold text-[#0d5c45]">✓ Synced to Appwrite — available in Dashboard and Tracking</span>
+              </div>
             ) : (
-              <p className="mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800" role="status">Saved only on this device. Appwrite did not save this application: {syncError}</p>
+              <div className="mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs font-semibold text-amber-800" role="status"><p className="m-0">✓ Saved on this device</p><p className="mt-1">Appwrite was not synced: {syncError}</p></div>
             )}
 
             <div className="flex flex-col gap-3 sm:flex-row justify-center">

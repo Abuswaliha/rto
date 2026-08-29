@@ -42,7 +42,6 @@ import {
 } from "@/lib/storage";
 import { PageShell } from "./page-shell";
 import { appointmentParts } from "@/lib/appointment";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
   isAppwriteConfigured,
   listUserDemoApplications,
@@ -466,7 +465,6 @@ export function Dashboard() {
           </div>
         </section>
       </div>
-    <MobileBottomNav />
     </PageShell>
   );
 }

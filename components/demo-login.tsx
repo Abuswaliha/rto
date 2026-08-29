@@ -65,7 +65,9 @@ export function DemoLogin() {
     setGoogleError("");
     setGoogleLoading(true);
 
-    const callback = `${window.location.origin}/auth/callback`;
+    const next = new URLSearchParams(window.location.search).get("next");
+    const destination = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
 
     try {
       signInWithGoogle(callback, `${callback}?error=oauth`);

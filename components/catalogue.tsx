@@ -110,41 +110,37 @@ export function Services() {
 
   return (
     <PageShell>
-      {/* Hero */}
-      <section className="bg-gradient-to-r from-[#075c48] via-[#0b6b55] to-[#0e765d] py-16 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-8 px-6 md:flex-row md:items-end">
+      {/* Hero Header - Full Screen Width & Sleek Compact Sizing */}
+      <section className="bg-gradient-to-r from-[#075c48] via-[#0b6b55] to-[#0e765d] py-8 text-white md:py-10">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col justify-between gap-6 px-4 sm:px-8 lg:px-12 md:flex-row md:items-end">
           <div className="max-w-2xl w-full">
-            <span className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
-              <ShieldCheck size={16} />
+            <span className="mb-2.5 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white/90 backdrop-blur-sm">
+              <ShieldCheck size={14} />
               Smart RTO services
             </span>
 
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-white/75">
-              Service catalogue
-            </p>
-
-            <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+            <h1 className="text-xl font-bold tracking-tight text-white md:text-2xl">
               What can we help you with?
             </h1>
 
-            <p className="mt-3 text-base leading-relaxed text-white/80 md:text-lg">
-              Start a service or search the catalogue below.
+            <p className="mt-1.5 text-xs leading-relaxed text-white/80 md:text-sm">
+              Start an online application or search the transport services catalogue below.
             </p>
 
             {/* Live Search Bar */}
-            <div className="mt-6 relative max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#167c74]" size={18} />
+            <div className="mt-4 relative max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#167c74]" size={16} />
               <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search services (e.g. Licence, Transfer, eChallan)..."
-                className="pl-10 h-11 bg-white text-[#152321] placeholder:text-[#667572] rounded-xl shadow-md border-0 focus-visible:ring-2 focus-visible:ring-white"
+                className="pl-9 h-10 bg-white text-[#152321] text-xs placeholder:text-[#667572] rounded-xl shadow-md border-0 focus-visible:ring-2 focus-visible:ring-white"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full px-2 py-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full px-2 py-0.5"
                 >
                   Clear
                 </button>
@@ -153,11 +149,11 @@ export function Services() {
           </div>
 
           {demoMode && (
-            <div className="flex max-w-xs items-start gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
-              <Info size={20} className="shrink-0 text-white/90" />
-              <div className="text-xs">
+            <div className="flex max-w-xs items-start gap-2.5 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-md">
+              <Info size={16} className="shrink-0 text-white/90 mt-0.5" />
+              <div className="text-[11px]">
                 <strong className="block font-bold text-white">Demo environment</strong>
-                <span className="mt-0.5 block leading-relaxed text-white/75">
+                <span className="mt-0.5 block leading-tight text-white/75">
                   All records and transactions shown here are fictional.
                 </span>
               </div>
@@ -166,51 +162,51 @@ export function Services() {
         </div>
       </section>
 
-      {/* Service Catalogue List */}
-      <main className="mx-auto max-w-6xl px-6 py-14">
+      {/* Service Catalogue List - Full Screen Width */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-8 lg:px-12">
         {filteredCatalog.length === 0 ? (
-          <div className="text-center py-16 bg-slate-50 rounded-2xl border border-slate-200">
-            <Search className="mx-auto h-10 w-10 text-slate-400 mb-3" />
-            <h3 className="text-lg font-bold text-slate-800">No services found</h3>
-            <p className="text-sm text-slate-500 mt-1">Try adjusting your search terms.</p>
-            <Button onClick={() => setSearchQuery("")} variant="outline" className="mt-4">
+          <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-200">
+            <Search className="mx-auto h-8 w-8 text-slate-400 mb-2" />
+            <h3 className="text-base font-bold text-slate-800">No services found</h3>
+            <p className="text-xs text-slate-500 mt-1">Try adjusting your search terms.</p>
+            <Button onClick={() => setSearchQuery("")} variant="outline" size="sm" className="mt-3 text-xs">
               Clear Search
             </Button>
           </div>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-8">
             {filteredCatalog.map((group) => (
               <section key={group.cat}>
-                <div className="mb-6 flex items-end justify-between border-b border-slate-100 pb-3">
+                <div className="mb-4 flex items-end justify-between border-b border-slate-100 pb-2.5">
                   <div>
-                    <h2 className="text-2xl font-extrabold tracking-tight text-[#152321]">
+                    <h2 className="text-lg font-bold tracking-tight text-[#152321]">
                       {group.cat}
                     </h2>
-                    <p className="mt-1 text-xs text-[#5e6f68]">{group.description}</p>
+                    <p className="mt-0.5 text-xs text-[#5e6f68]">{group.description}</p>
                   </div>
 
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-[#5e6f68]">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-[#5e6f68]">
                     {group.items.length}{" "}
                     {group.items.length === 1 ? "service" : "services"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((item) => {
                     const Icon = item.icon;
 
                     return (
                       <Card
                         key={item.t}
-                        className="group flex min-h-[220px] flex-col justify-between transition-all hover:-translate-y-1 hover:border-[#167c74] hover:shadow-md"
+                        className="group flex min-h-[190px] flex-col justify-between rounded-xl border border-[#dce8e5] bg-white p-4 shadow-sm transition-all hover:-translate-y-1 hover:border-[#167c74] hover:shadow-md"
                       >
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#ddf3ef] text-[#167c74]">
-                            <Icon size={22} />
+                        <CardHeader className="p-0 flex flex-row items-center justify-between space-y-0 pb-2">
+                          <div className="grid h-9 w-9 place-items-center rounded-lg bg-[#ddf3ef] text-[#167c74]">
+                            <Icon size={18} />
                           </div>
                           <Badge
                             variant={item.live ? "success" : "outline"}
-                            className="gap-1.5 font-bold"
+                            className="gap-1 text-[10px] font-bold py-0.5 px-2"
                           >
                             {item.live && demoMode ? (
                               <>
@@ -219,32 +215,32 @@ export function Services() {
                               </>
                             ) : (
                               <>
-                                <Info size={12} />
+                                <Info size={11} />
                                 Available
                               </>
                             )}
                           </Badge>
                         </CardHeader>
 
-                        <CardContent className="my-2">
-                          <CardTitle className="text-base group-hover:text-[#167c74]">
+                        <CardContent className="p-0 my-2">
+                          <CardTitle className="text-sm font-bold text-[#152321] group-hover:text-[#167c74]">
                             {item.t}
                           </CardTitle>
-                          <CardDescription className="mt-1">
+                          <CardDescription className="mt-1 text-xs text-[#5e6f68] leading-relaxed">
                             {item.d}
                           </CardDescription>
                         </CardContent>
 
-                        <CardFooter className="pt-2">
+                        <CardFooter className="p-0 pt-2 border-t border-slate-50">
                           <Button
                             variant="link"
                             className="p-0 text-xs font-bold text-[#167c74] group-hover:text-[#0d5c45]"
                             asChild
                           >
-                            <Link href={item.h} className="flex items-center gap-1.5">
+                            <Link href={item.h} className="flex items-center gap-1">
                               <span>{item.live ? "Start service" : "Read guidance"}</span>
                               <ArrowRight
-                                size={14}
+                                size={13}
                                 className="transition-transform group-hover:translate-x-1"
                               />
                             </Link>
